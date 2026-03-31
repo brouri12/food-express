@@ -18,13 +18,24 @@ export class AuthService {
 
     try {
       console.log('Initializing Keycloak...');
-      const authenticated = await this.keycloak.init({
+      
+      // Add timeout to prevent hanging
+      const initPromise = this.keycloak.init({
         onLoad: 'check-sso',
         silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
         redirectUri: window.location.origin,
         flow: 'standard',
-        responseMode: 'fragment'
+        responseMode: 'fragment',
+        checkLoginIframe: false, // Disable iframe check to prevent hanging
+        enableLogging: true
       });
+
+      // Add 10 second timeout
+      const timeoutPromise = new Promise<boolean>((_, reject) => {
+        setTimeout(() => reject(new Error('Keycloak initialization timeout')), 10000);
+      });
+
+      const authenticated = await Promise.race([initPromise, timeoutPromise]);
 
       console.log('Keycloak initialized, authenticated:', authenticated);
       this.authStatus$.next(authenticated);
@@ -41,6 +52,7 @@ export class AuthService {
     } catch (error) {
       console.error('Keycloak init error:', error);
       // Don't fail completely - allow app to work even if Keycloak init fails
+      this.authStatus$.next(false);
       return false;
     }
   }

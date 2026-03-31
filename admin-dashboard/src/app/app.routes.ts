@@ -11,6 +11,7 @@ export const routes: Routes = [
       { path: 'drivers', loadComponent: () => import('./pages/drivers/drivers.component').then(m => m.DriversComponent) },
       { path: 'promotions', loadComponent: () => import('./pages/promotions/promotions.component').then(m => m.PromotionsAdminComponent) },
       { path: 'restaurants', loadComponent: () => import('./pages/restaurants/restaurants.component').then(m => m.RestaurantsAdminComponent) },
+      { path: 'menu', loadComponent: () => import('./pages/menu/menu.component').then(m => m.MenuComponent) },
     ]
   },
   { path: '**', redirectTo: '' }

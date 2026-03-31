@@ -17,6 +17,7 @@ export const routes: Routes = [
   { path: 'login', loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent) },
   { path: 'register', loadComponent: () => import('./pages/register/register.component').then(m => m.RegisterComponent) },
   { path: 'role-assignment', loadComponent: () => import('./pages/role-assignment/role-assignment.component').then(m => m.RoleAssignmentComponent) },
+  { path: 'debug', loadComponent: () => import('./pages/debug/debug.component').then(m => m.DebugComponent) },
   { path: 'signup', loadComponent: () => import('./pages/signup/signup.component').then(m => m.SignupComponent) },
   { path: '**', loadComponent: () => import('./pages/not-found/not-found.component').then(m => m.NotFoundComponent) },
 ];

@@ -16,6 +16,7 @@ export class AdminLayoutComponent {
     { path: '/deliveries', icon: '🛵', label: 'Livraisons' },
     { path: '/drivers', icon: '👤', label: 'Livreurs' },
     { path: '/restaurants', icon: '🍴', label: 'Restaurants' },
+    { path: '/menu', icon: '📋', label: 'Menu Management' },
     { path: '/promotions', icon: '🎁', label: 'Promotions' },
   ];
 }

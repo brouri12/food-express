@@ -19,6 +19,8 @@ public class SecurityConfig {
                 authorizationManagerRequestMatcherRegistry
                     .requestMatchers("/actuator/health/**").permitAll()
                     .requestMatchers("/api/deliveries/health").permitAll()
+                    .requestMatchers("/api/deliveries/**").permitAll() // Allow unauthenticated access to delivery API
+                    .requestMatchers("/api/drivers/**").permitAll() // Allow unauthenticated access to drivers API
                     .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 ->
