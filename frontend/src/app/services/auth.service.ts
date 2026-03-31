@@ -28,12 +28,65 @@ export class AuthService {
 
       console.log('Keycloak initialized, authenticated:', authenticated);
       this.authStatus$.next(authenticated);
+
+      // Handle post-registration role assignment
+      if (authenticated) {
+        // Delay to ensure user data is fully loaded
+        setTimeout(() => {
+          this.handlePostRegistrationRole();
+        }, 1000);
+      }
+
       return authenticated;
     } catch (error) {
       console.error('Keycloak init error:', error);
       // Don't fail completely - allow app to work even if Keycloak init fails
       return false;
     }
+  }
+
+  /**
+   * Handle role assignment after registration
+   */
+  private async handlePostRegistrationRole(): Promise<void> {
+    const pendingRole = localStorage.getItem('pendingUserRole');
+    if (pendingRole && this.isAuthenticated()) {
+      // Check if user has the selected role
+      const userRoles = this.getUserRoles();
+      const hasSelectedRole = userRoles.includes(pendingRole);
+      
+      if (!hasSelectedRole) {
+        console.log(`User needs role assignment: ${pendingRole}`);
+        
+        // Import the KeycloakAdminService dynamically to avoid circular dependency
+        const { KeycloakAdminService } = await import('./keycloak-admin.service');
+        const keycloakAdminService = new (KeycloakAdminService as any)(
+          // We'll inject HttpClient in the component that calls this
+        );
+        
+        // For now, we'll handle this in the component level
+        // Store a flag to indicate role assignment is needed
+        localStorage.setItem('needsRoleAssignment', 'true');
+      } else {
+        // User already has the correct role, clear pending role
+        localStorage.removeItem('pendingUserRole');
+      }
+    }
+  }
+
+  /**
+   * Check if user needs role assignment
+   */
+  needsRoleAssignment(): boolean {
+    return localStorage.getItem('needsRoleAssignment') === 'true';
+  }
+
+  /**
+   * Clear role assignment flag
+   */
+  clearRoleAssignmentFlag(): void {
+    localStorage.removeItem('needsRoleAssignment');
+    localStorage.removeItem('pendingUserRole');
   }
 
   /**
@@ -56,6 +109,34 @@ export class AuthService {
    */
   hasRole(role: string): boolean {
     return this.getUserRoles().includes(role);
+  }
+
+  /**
+   * Check if user is admin
+   */
+  isAdmin(): boolean {
+    return this.hasRole('admin');
+  }
+
+  /**
+   * Check if user is restaurant owner
+   */
+  isRestaurantOwner(): boolean {
+    return this.hasRole('restaurant_owner');
+  }
+
+  /**
+   * Check if user is delivery person
+   */
+  isDeliveryPerson(): boolean {
+    return this.hasRole('delivery_person');
+  }
+
+  /**
+   * Check if user is customer
+   */
+  isCustomer(): boolean {
+    return this.hasRole('customer');
   }
 
   /**
@@ -89,7 +170,7 @@ export class AuthService {
     if (this.keycloak) {
       this.keycloak.login({
         action: 'register',
-        redirectUri: window.location.origin + '/dashboard'
+        redirectUri: window.location.origin + '/role-assignment'
       }).catch(error => {
         console.error('Registration error:', error);
       });

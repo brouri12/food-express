@@ -72,6 +72,6 @@ export class LoginComponent {
   }
 
   register(): void {
-    this.authService.register();
+    this.router.navigate(['/register']);
   }
 }

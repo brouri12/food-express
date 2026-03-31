@@ -21,6 +21,7 @@
   "failureFactor": 30,
   "displayName": "FoodExpress",
   "displayNameHtml": "<div class=\"kc-logo-text\"><span>FoodExpress</span></div>",
+  "defaultRoles": ["customer"],
   "roles": {
     "realm": [
       {
