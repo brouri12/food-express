@@ -15,16 +15,29 @@ public class RatingEventPublisher {
 
     public void publishRatingCreated(RatingResponseDTO rating) {
         try {
+            log.info("════════════════════════════════════════════════");
+            log.info("🐇 [RABBITMQ PUBLISHER] Envoi du message...");
+            log.info("   Exchange   : {}", RabbitMQConfig.RATING_EXCHANGE);
+            log.info("   RoutingKey : {}", RabbitMQConfig.RATING_ROUTING_KEY);
+            log.info("   Queue      : {}", RabbitMQConfig.RATING_QUEUE);
+            log.info("   Rating ID  : {}", rating.getId());
+            log.info("   Restaurant : {}", rating.getRestaurantId());
+            log.info("   Note       : {}/5", rating.getNote());
+            log.info("   User ID    : {}", rating.getUserId());
+
             rabbitTemplate.convertAndSend(
                     RabbitMQConfig.RATING_EXCHANGE,
                     RabbitMQConfig.RATING_ROUTING_KEY,
                     rating
             );
-            log.info("✅ [RABBITMQ] Événement publié — rating id={}, restaurant={}",
-                    rating.getId(), rating.getRestaurantId());
+
+            log.info("✅ [RABBITMQ PUBLISHER] Message publié avec succès !");
+            log.info("════════════════════════════════════════════════");
+
         } catch (Exception e) {
-            // Ne bloque pas la création de l'avis
-            log.error("❌ [RABBITMQ] Erreur de publication : {}", e.getMessage());
+            log.error("════════════════════════════════════════════════");
+            log.error("❌ [RABBITMQ PUBLISHER] Erreur publication : {}", e.getMessage());
+            log.error("════════════════════════════════════════════════");
         }
     }
 }

@@ -1,22 +1,22 @@
+@"
 # Maven
 target/
 *.class
 *.jar
 *.war
-
 # IntelliJ
 .idea/
 *.iml
 *.iws
 *.ipr
-
 # OS
 .DS_Store
 Thumbs.db
-
 # Logs
 *.log
 logs/
-
 # Spring Boot
 spring-shell.log
+node_modules/
+frontend/node_modules/
+"@ | Set-Content .gitignore -Encoding UTF8

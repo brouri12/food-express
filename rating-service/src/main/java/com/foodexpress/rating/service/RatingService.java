@@ -29,18 +29,23 @@ public class RatingService {
     public RatingResponseDTO createRating(RatingRequestDTO dto, String userId) {
 
         // 🔗 OPENFEIGN — vérifier que le restaurant existe
-        // Si Restaurant Service absent → fallback retourne true automatiquement
+        log.info("════════════════════════════════════════════════");
+        log.info("🔗 [OPENFEIGN] Appel Restaurant Service...");
+        log.info("   Restaurant ID demandé : {}", dto.getRestaurantId());
         try {
             Boolean exists = restaurantClient.existsById(dto.getRestaurantId());
             if (exists == null || !exists) {
+                log.error("❌ [OPENFEIGN] Restaurant {} introuvable !", dto.getRestaurantId());
                 throw new EntityNotFoundException(
                         "Restaurant introuvable avec l'id : " + dto.getRestaurantId());
             }
+            log.info("✅ [OPENFEIGN] Restaurant {} confirmé existant !", dto.getRestaurantId());
         } catch (feign.FeignException e) {
-            log.error("❌ Erreur OpenFeign : {}", e.getMessage());
+            log.error("❌ [OPENFEIGN] Erreur appel Restaurant Service : {}", e.getMessage());
             throw new EntityNotFoundException(
                     "Restaurant introuvable avec l'id : " + dto.getRestaurantId());
         }
+        log.info("════════════════════════════════════════════════");
 
         // 🔒 RÈGLE MÉTIER — un user ne peut noter qu'une seule fois
         ratingRepository.findByUserIdAndRestaurantId(userId, dto.getRestaurantId())

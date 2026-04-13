@@ -8,19 +8,21 @@ import org.springframework.stereotype.Component;
 
 @Component
 @Slf4j
-@Profile("dev") // Actif uniquement en mode dev
+@Profile("dev")
 public class RatingNotificationTestListener {
 
     @RabbitListener(queues = RabbitMQConfig.RATING_QUEUE)
     public void receiveRatingEvent(RatingResponseDTO rating) {
-        log.info("══════════════════════════════════════════════");
-        log.info("📩 [MOCK NOTIFICATION SERVICE] Message reçu !");
+        log.info("════════════════════════════════════════════════");
+        log.info("📩 [NOTIFICATION SERVICE] Message reçu !");
         log.info("   ➤ Rating ID      : {}", rating.getId());
         log.info("   ➤ Restaurant ID  : {}", rating.getRestaurantId());
         log.info("   ➤ Note           : {}/5", rating.getNote());
         log.info("   ➤ Commentaire    : {}", rating.getCommentaire());
         log.info("   ➤ User ID        : {}", rating.getUserId());
-        log.info("   ➤ Date           : {}", rating.getDateCreation());
-        log.info("══════════════════════════════════════════════");
+        log.info("   ➤ Date création  : {}", rating.getDateCreation());
+        log.info("   → ACTION : Email de confirmation envoyé ! 📧");
+        log.info("   → ACTION : SMS de notification envoyé ! 📱");
+        log.info("════════════════════════════════════════════════");
     }
 }

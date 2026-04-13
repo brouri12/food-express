@@ -9,18 +9,16 @@ spring:
           enabled: true
           lower-case-service-id: true
       routes:
-        # ── Rating Service ──
         - id: rating-service
           uri: lb://rating-service
           predicates:
             - Path=/ratings/**
-
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: http://localhost:8080/realms/foodexpress
-          jwk-set-uri: http://localhost:8080/realms/foodexpress/protocol/openid-connect/certs
+        - id: rating-api
+          uri: lb://rating-service
+          predicates:
+            - Path=/api/ratings/**
+          filters:
+            - RewritePath=/api/ratings/(?<remaining>.*), /$\{remaining}
 
 server:
   port: 8222
