@@ -1,0 +1,35 @@
+# Node
+node_modules/
+dist/
+.angular/
+
+# Maven / Java
+target/
+*.jar
+*.war
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.suo
+*.user
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes (don't commit data)
+foodexpress/setup/db/*.log
+
+# Env secrets (keep .env.example, not .env with real values)
+# .env  <- we keep it for demo purposes
+
+# Angular build output
+foodexpress-angular/dist/
+foodexpress-angular/.angular/
+
+# Test artifacts
+foodexpress/test-results.txt
+foodexpress/*.json

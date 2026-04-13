@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres-user:5432/userdb
+    username: foodexpress
+    password: foodexpress123
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+jwt:
+  secret: foodexpress-jwt-secret-key-2024-esprit
+  expiration: 86400000

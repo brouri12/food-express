@@ -1,0 +1,448 @@
+# ================================================================
+# FoodExpress — Stack complète Docker Compose
+# ================================================================
+#
+# DÉMARRAGE RAPIDE :
+#   docker-compose up -d
+#   docker-compose logs -f          (suivre les logs)
+#   docker-compose down -v          (tout supprimer)
+#
+# URLS :
+#   Frontend Angular  → http://localhost:4200  (npm start)
+#   API Gateway       → http://localhost:8080
+#   Swagger UI        → http://localhost:8080/swagger-ui.html
+#   Eureka Dashboard  → http://localhost:8761
+#   Keycloak Admin    → http://localhost:8180  (admin / admin)
+#   RabbitMQ UI       → http://localhost:15672 (guest / guest)
+#   Prometheus        → http://localhost:9090
+#   Grafana           → http://localhost:3000  (admin / admin)
+#   pgAdmin           → http://localhost:5050  (admin@fe.com / admin)
+#
+# COMPTES DE TEST :
+#   Admin       → admin@foodexpress.com    / admin123
+#   Client      → client@foodexpress.com   / client123
+#   Restaurateur→ resto@foodexpress.com    / resto123
+#   Livreur     → livreur@foodexpress.com  / livreur123
+# ================================================================
+
+services:
+
+  # ──────────────────────────────────────────────────────────────
+  # 1. BASES DE DONNÉES
+  # ──────────────────────────────────────────────────────────────
+
+  # PostgreSQL unique avec toutes les bases FoodExpress
+  postgres:
+    image: postgres:15-alpine
+    container_name: fe-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: foodexpress
+      POSTGRES_PASSWORD: foodexpress123
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./setup/db/init-all-databases.sh:/docker-entrypoint-initdb.d/00-init-all-databases.sh
+      - ./setup/db/01-init-userdb.sql:/docker-entrypoint-initdb.d/01-init-userdb.sql
+      - ./setup/db/02-init-restaurantdb.sql:/docker-entrypoint-initdb.d/02-init-restaurantdb.sql
+      - ./setup/db/03-init-menudb.sql:/docker-entrypoint-initdb.d/03-init-menudb.sql
+      - ./setup/db/04-init-promotiondb.sql:/docker-entrypoint-initdb.d/04-init-promotiondb.sql
+      - ./setup/db/05-init-deliverydb.sql:/docker-entrypoint-initdb.d/05-init-deliverydb.sql
+    networks:
+      - foodexpress-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U foodexpress -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # PostgreSQL dédié à Keycloak (séparé pour éviter les conflits d'init)
+  postgres-keycloak:
+    image: postgres:15-alpine
+    container_name: fe-postgres-keycloak
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak123
+      POSTGRES_DB: keycloakdb
+    volumes:
+      - postgres-keycloak-data:/var/lib/postgresql/data
+    networks:
+      - foodexpress-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloakdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  # pgAdmin — Interface graphique pour les bases
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: fe-pgadmin
+    restart: unless-stopped
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@fe.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+      - ./setup/pgadmin/servers.json:/pgadmin4/servers.json
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - foodexpress-net
+
+  # ──────────────────────────────────────────────────────────────
+  # 2. KEYCLOAK — Sécurité JWT
+  # ──────────────────────────────────────────────────────────────
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0
+    container_name: fe-keycloak
+    restart: unless-stopped
+    command: >
+      start-dev
+      --import-realm
+    ports:
+      - "8180:8080"
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres-keycloak:5432/keycloakdb
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak123
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_HTTPS: "false"
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+    volumes:
+      - ./setup/keycloak:/opt/keycloak/data/import
+    depends_on:
+      postgres-keycloak:
+        condition: service_healthy
+    networks:
+      - foodexpress-net
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080 && echo -e 'GET /realms/master HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3 && cat <&3 | grep -q 'realm' && exit 0 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 20s
+
+  # ──────────────────────────────────────────────────────────────
+  # 3. RABBITMQ — Messaging asynchrone
+  # ──────────────────────────────────────────────────────────────
+
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: fe-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_VHOST: /
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - ./setup/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+    networks:
+      - foodexpress-net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # ──────────────────────────────────────────────────────────────
+  # 4. INFRASTRUCTURE SPRING CLOUD
+  # ──────────────────────────────────────────────────────────────
+
+  eureka-server:
+    build:
+      context: ./infrastructure/eureka-server
+      dockerfile: Dockerfile
+    image: foodexpress/eureka-server:latest
+    container_name: fe-eureka
+    restart: unless-stopped
+    ports:
+      - "8761:8761"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    networks:
+      - foodexpress-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health | grep -q UP || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+
+  config-server:
+    build:
+      context: ./infrastructure/config-server
+      dockerfile: Dockerfile
+    image: foodexpress/config-server:latest
+    container_name: fe-config
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker,native
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://fe-eureka:8761/eureka/
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - foodexpress-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8888/actuator/health | grep -q UP || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+
+  api-gateway:
+    build:
+      context: ./infrastructure/api-gateway
+      dockerfile: Dockerfile
+    image: foodexpress/api-gateway:latest
+    container_name: fe-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://fe-eureka:8761/eureka/
+      SPRING_CONFIG_IMPORT: optional:configserver:http://fe-config:8888
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://fe-keycloak:8080/realms/foodexpress
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    networks:
+      - foodexpress-net
+
+  # ──────────────────────────────────────────────────────────────
+  # 5. MICRO-SERVICES MÉTIERS
+  # ──────────────────────────────────────────────────────────────
+
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    image: foodexpress/user-service:latest
+    container_name: fe-user-svc
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://fe-eureka:8761/eureka/
+      SPRING_CONFIG_IMPORT: optional:configserver:http://fe-config:8888
+      SPRING_DATASOURCE_URL: jdbc:postgresql://fe-postgres:5432/userdb
+      SPRING_DATASOURCE_USERNAME: foodexpress
+      SPRING_DATASOURCE_PASSWORD: foodexpress123
+      JWT_SECRET: foodexpress-jwt-secret-key-2024-esprit-very-long-secret
+      JWT_EXPIRATION: "86400000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - foodexpress-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health | grep -q UP || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  restaurant-service:
+    build:
+      context: ./services/restaurant-service
+      dockerfile: Dockerfile
+    image: foodexpress/restaurant-service:latest
+    container_name: fe-restaurant-svc
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://fe-eureka:8761/eureka/
+      SPRING_CONFIG_IMPORT: optional:configserver:http://fe-config:8888
+      SPRING_DATASOURCE_URL: jdbc:postgresql://fe-postgres:5432/restaurantdb
+      SPRING_DATASOURCE_USERNAME: foodexpress
+      SPRING_DATASOURCE_PASSWORD: foodexpress123
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - foodexpress-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health | grep -q UP || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  menu-service:
+    build:
+      context: ./services/menu-service
+      dockerfile: Dockerfile
+    image: foodexpress/menu-service:latest
+    container_name: fe-menu-svc
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://fe-eureka:8761/eureka/
+      SPRING_CONFIG_IMPORT: optional:configserver:http://fe-config:8888
+      SPRING_DATASOURCE_URL: jdbc:postgresql://fe-postgres:5432/menudb
+      SPRING_DATASOURCE_USERNAME: foodexpress
+      SPRING_DATASOURCE_PASSWORD: foodexpress123
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - foodexpress-net
+
+  promotion-service:
+    build:
+      context: ./services/promotion-service
+      dockerfile: Dockerfile
+    image: foodexpress/promotion-service:latest
+    container_name: fe-promotion-svc
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://fe-eureka:8761/eureka/
+      SPRING_CONFIG_IMPORT: optional:configserver:http://fe-config:8888
+      SPRING_DATASOURCE_URL: jdbc:postgresql://fe-postgres:5432/promotiondb
+      SPRING_DATASOURCE_USERNAME: foodexpress
+      SPRING_DATASOURCE_PASSWORD: foodexpress123
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - foodexpress-net
+
+  delivery-service:
+    build:
+      context: ./services/delivery-service
+      dockerfile: Dockerfile
+    image: foodexpress/delivery-service:latest
+    container_name: fe-delivery-svc
+    restart: unless-stopped
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://fe-eureka:8761/eureka/
+      SPRING_CONFIG_IMPORT: optional:configserver:http://fe-config:8888
+      SPRING_DATASOURCE_URL: jdbc:postgresql://fe-postgres:5432/deliverydb
+      SPRING_DATASOURCE_USERNAME: foodexpress
+      SPRING_DATASOURCE_PASSWORD: foodexpress123
+      SPRING_RABBITMQ_HOST: fe-rabbitmq
+      SPRING_RABBITMQ_PORT: "5672"
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+      DELIVERY_BASE_FEE: "1.99"
+      DELIVERY_FEE_PER_KM: "0.50"
+      DELIVERY_ESTIMATED_TIME_MIN: "25"
+      DELIVERY_ESTIMATED_TIME_MAX: "35"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - foodexpress-net
+
+  # ──────────────────────────────────────────────────────────────
+  # 6. MONITORING
+  # ──────────────────────────────────────────────────────────────
+
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: fe-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - foodexpress-net
+
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: fe-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_INSTALL_PLUGINS: grafana-clock-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    networks:
+      - foodexpress-net
+
+# ──────────────────────────────────────────────────────────────
+# VOLUMES
+# ──────────────────────────────────────────────────────────────
+
+volumes:
+  postgres-data:
+  postgres-keycloak-data:
+  pgadmin-data:
+  rabbitmq-data:
+  prometheus-data:
+  grafana-data:
+
+# ──────────────────────────────────────────────────────────────
+# RÉSEAU
+# ──────────────────────────────────────────────────────────────
+
+networks:
+  foodexpress-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

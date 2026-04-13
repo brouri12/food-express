@@ -1,0 +1,141 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  config:
+    import: optional:configserver:http://config-server:8888
+  cloud:
+    gateway:
+      # ── CORS global — autorise Angular (localhost:4200) ──────
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:4200"
+              - "http://localhost:3000"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+              - PATCH
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+            maxAge: 3600
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/api/auth/**, /api/users/**
+          filters:
+            - StripPrefix=0
+
+        - id: restaurant-service
+          uri: lb://restaurant-service
+          predicates:
+            - Path=/api/restaurants/**
+          filters:
+            - StripPrefix=0
+
+        - id: menu-service
+          uri: lb://menu-service
+          predicates:
+            - Path=/api/menus/**
+          filters:
+            - StripPrefix=0
+
+        - id: promotion-service
+          uri: lb://promotion-service
+          predicates:
+            - Path=/api/promotions/**
+          filters:
+            - StripPrefix=0
+
+        - id: delivery-service
+          uri: lb://delivery-service
+          predicates:
+            - Path=/api/delivery/**
+          filters:
+            - StripPrefix=0
+
+        # Swagger aggregation
+        - id: user-service-docs
+          uri: lb://user-service
+          predicates:
+            - Path=/user-service/v3/api-docs
+          filters:
+            - RewritePath=/user-service/v3/api-docs, /v3/api-docs
+
+        - id: restaurant-service-docs
+          uri: lb://restaurant-service
+          predicates:
+            - Path=/restaurant-service/v3/api-docs
+          filters:
+            - RewritePath=/restaurant-service/v3/api-docs, /v3/api-docs
+
+        - id: menu-service-docs
+          uri: lb://menu-service
+          predicates:
+            - Path=/menu-service/v3/api-docs
+          filters:
+            - RewritePath=/menu-service/v3/api-docs, /v3/api-docs
+
+        - id: promotion-service-docs
+          uri: lb://promotion-service
+          predicates:
+            - Path=/promotion-service/v3/api-docs
+          filters:
+            - RewritePath=/promotion-service/v3/api-docs, /v3/api-docs
+
+        - id: delivery-service-docs
+          uri: lb://delivery-service
+          predicates:
+            - Path=/delivery-service/v3/api-docs
+          filters:
+            - RewritePath=/delivery-service/v3/api-docs, /v3/api-docs
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak:8180/realms/foodexpress
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-server:8761/eureka/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: user-service
+        url: /user-service/v3/api-docs
+      - name: restaurant-service
+        url: /restaurant-service/v3/api-docs
+      - name: menu-service
+        url: /menu-service/v3/api-docs
+      - name: promotion-service
+        url: /promotion-service/v3/api-docs
+      - name: delivery-service
+        url: /delivery-service/v3/api-docs
