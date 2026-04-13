@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  postgres-promotion:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: promotiondb
+      POSTGRES_USER: foodexpress
+      POSTGRES_PASSWORD: foodexpress123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  promotion-service:
+    build: .
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-promotion:5432/promotiondb
+      SPRING_DATASOURCE_USERNAME: foodexpress
+      SPRING_DATASOURCE_PASSWORD: foodexpress123
+    depends_on:
+      - postgres-promotion
+
+volumes:
+  postgres_data:
