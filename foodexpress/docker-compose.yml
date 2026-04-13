@@ -1,0 +1,172 @@
+# ================================================================
+# FoodExpress — Restaurant Service uniquement
+# ================================================================
+#
+# DÉMARRAGE :
+#   docker-compose up -d
+#
+# URLS :
+#   API Gateway       → http://localhost:8080
+#   Eureka Dashboard  → http://localhost:8761
+#   Restaurant Service→ http://localhost:8082
+#   pgAdmin           → http://localhost:5050  (admin@fe.com / admin)
+# ================================================================
+
+services:
+
+  # ──────────────────────────────────────────────────────────────
+  # 1. BASE DE DONNÉES
+  # ──────────────────────────────────────────────────────────────
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: fe-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: foodexpress
+      POSTGRES_PASSWORD: foodexpress123
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./setup/db/init-all-databases.sh:/docker-entrypoint-initdb.d/00-init-all-databases.sh
+      - ./setup/db/02-init-restaurantdb.sql:/docker-entrypoint-initdb.d/02-init-restaurantdb.sql
+    networks:
+      - foodexpress-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U foodexpress -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: fe-pgadmin
+    restart: unless-stopped
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@fe.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+      - ./setup/pgadmin/servers.json:/pgadmin4/servers.json
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - foodexpress-net
+
+  # ──────────────────────────────────────────────────────────────
+  # 2. INFRASTRUCTURE SPRING CLOUD
+  # ──────────────────────────────────────────────────────────────
+
+  eureka-server:
+    build:
+      context: ./infrastructure/eureka-server
+      dockerfile: Dockerfile
+    image: foodexpress/eureka-server:latest
+    container_name: fe-eureka
+    restart: unless-stopped
+    ports:
+      - "8761:8761"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    networks:
+      - foodexpress-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health | grep -q UP || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+
+  config-server:
+    build:
+      context: ./infrastructure/config-server
+      dockerfile: Dockerfile
+    image: foodexpress/config-server:latest
+    container_name: fe-config
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker,native
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://fe-eureka:8761/eureka/
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - foodexpress-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8888/actuator/health | grep -q UP || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+
+  api-gateway:
+    build:
+      context: ./infrastructure/api-gateway
+      dockerfile: Dockerfile
+    image: foodexpress/api-gateway:latest
+    container_name: fe-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://fe-eureka:8761/eureka/
+      SPRING_CONFIG_IMPORT: optional:configserver:http://fe-config:8888
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+    networks:
+      - foodexpress-net
+
+  # ──────────────────────────────────────────────────────────────
+  # 3. RESTAURANT SERVICE
+  # ──────────────────────────────────────────────────────────────
+
+  restaurant-service:
+    build:
+      context: ./services/restaurant-service
+      dockerfile: Dockerfile
+    image: foodexpress/restaurant-service:latest
+    container_name: fe-restaurant-svc
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://fe-eureka:8761/eureka/
+      SPRING_CONFIG_IMPORT: optional:configserver:http://fe-config:8888
+      SPRING_DATASOURCE_URL: jdbc:postgresql://fe-postgres:5432/restaurantdb
+      SPRING_DATASOURCE_USERNAME: foodexpress
+      SPRING_DATASOURCE_PASSWORD: foodexpress123
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - foodexpress-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health | grep -q UP || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  postgres-data:
+  pgadmin-data:
+
+networks:
+  foodexpress-net:
+    driver: bridge

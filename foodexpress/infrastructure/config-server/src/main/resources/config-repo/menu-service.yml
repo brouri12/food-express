@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres-menu:5432/menudb
+    username: foodexpress
+    password: foodexpress123
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
