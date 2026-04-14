@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, catchError, throwError, of } from 'rxjs';
 import { API } from './api.config';
 import { AuthResponse, LoginRequest, RegisterRequest, User } from '../models/user.model';
 
@@ -20,10 +20,37 @@ export class AuthService {
     );
   }
 
+  /**
+   * Inscription réelle vers le user-service. Si le backend est injoignable (pas de Docker, mauvais port),
+   * status HTTP 0 → session locale de démo (même principe que le login admin sans API).
+   */
   register(req: RegisterRequest): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(API.AUTH_REGISTER, req).pipe(
-      tap(res => this.saveSession(res))
+      tap(res => this.saveSession(res)),
+      catchError((err: unknown) => {
+        if (err instanceof HttpErrorResponse && err.status === 0) {
+          const res = this.offlineRegisterResponse(req);
+          this.saveSession(res);
+          return of(res);
+        }
+        return throwError(() => err);
+      })
     );
+  }
+
+  private offlineRegisterResponse(req: RegisterRequest): AuthResponse {
+    const id =
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    return {
+      token: `offline-${id}`,
+      userId: `local-${id}`,
+      email: req.email,
+      role: req.role,
+      firstName: req.firstName,
+      lastName: req.lastName
+    };
   }
 
   logout(): void {

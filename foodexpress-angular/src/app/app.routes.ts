@@ -11,6 +11,7 @@ export const routes: Routes = [
       { path: 'restaurants', loadComponent: () => import('./pages/restaurants/restaurants.component').then(m => m.RestaurantsComponent) },
       { path: 'restaurant/:id', loadComponent: () => import('./pages/restaurant-menu/restaurant-menu.component').then(m => m.RestaurantMenuComponent) },
       { path: 'cart', loadComponent: () => import('./pages/cart/cart.component').then(m => m.CartComponent) },
+      { path: 'profile', loadComponent: () => import('./pages/profile/profile.component').then(m => m.ProfileComponent), canActivate: [authGuard] },
       { path: 'delivery/:orderId', loadComponent: () => import('./pages/delivery-tracking/delivery-tracking.component').then(m => m.DeliveryTrackingComponent) },
       { path: 'login', loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent) },
       { path: 'signup', loadComponent: () => import('./pages/signup/signup.component').then(m => m.SignupComponent) },

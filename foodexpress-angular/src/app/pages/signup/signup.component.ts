@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
@@ -96,8 +97,31 @@ export class SignupComponent {
 
   onSubmit(): void {
     this.loading = true;
+    this.error = '';
     this.auth.register({ email: this.email, password: this.password,
       firstName: this.firstName, lastName: this.lastName, phone: this.phone, role: this.role })
-      .subscribe({ next: () => this.router.navigate(['/']), error: () => { this.error = 'Erreur lors de la création du compte'; this.loading = false; } });
+      .subscribe({
+        next: () => this.router.navigate(['/']),
+        error: (err: unknown) => {
+          this.error = this.messageFromRegisterError(err);
+          this.loading = false;
+        }
+      });
+  }
+
+  private messageFromRegisterError(err: unknown): string {
+    if (err instanceof HttpErrorResponse) {
+      if (err.status === 0) {
+        return 'Impossible de joindre l’API (port 8080). Démarrez la stack backend : dans le dossier foodexpress, exécutez « docker compose up -d ».';
+      }
+      const body = err.error;
+      if (body && typeof body === 'object' && 'message' in body && typeof (body as { message: unknown }).message === 'string') {
+        return (body as { message: string }).message;
+      }
+      if (typeof body === 'string' && body.trim()) {
+        return body;
+      }
+    }
+    return 'Erreur lors de la création du compte';
   }
 }

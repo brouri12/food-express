@@ -56,6 +56,10 @@ import { AuthService } from '../services/auth.service';
                    class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-md">
                   👤 {{ auth.currentUser()?.firstName }}
                 </a>
+                <button type="button" (click)="auth.logout()"
+                        class="px-2 sm:px-3 py-2 text-xs sm:text-sm font-semibold text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors whitespace-nowrap">
+                  Déconnexion
+                </button>
               </ng-container>
               <ng-template #guestActions>
                 <a routerLink="/login" class="text-gray-700 font-medium hover:text-orange-600 px-3 py-2 hidden md:block">
