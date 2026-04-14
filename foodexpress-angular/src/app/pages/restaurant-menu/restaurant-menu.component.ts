@@ -242,6 +242,12 @@ import { MenuItem } from '../../models/menu.model';
               </a>
             </div>
           </div>
+          <div class="pb-4 flex items-center gap-2 flex-wrap">
+            <span class="text-xs text-gray-500">Raccourcis prix :</span>
+            <button type="button" (click)="applyMaxPrice(15)" class="px-2 py-1 rounded-full bg-gray-100 text-xs text-gray-700 hover:bg-gray-200">≤ 15€</button>
+            <button type="button" (click)="applyMaxPrice(25)" class="px-2 py-1 rounded-full bg-gray-100 text-xs text-gray-700 hover:bg-gray-200">≤ 25€</button>
+            <button type="button" (click)="applyMaxPrice(40)" class="px-2 py-1 rounded-full bg-gray-100 text-xs text-gray-700 hover:bg-gray-200">≤ 40€</button>
+          </div>
         </div>
       </div>
 
@@ -441,6 +447,11 @@ export class RestaurantMenuComponent implements OnInit {
   onFiltersChange(): void {
     this.page = 1;
     this.saveFilters();
+  }
+
+  applyMaxPrice(value: number): void {
+    this.maxPrice = value;
+    this.onFiltersChange();
   }
 
   addToCart(item: MenuItem): void {
