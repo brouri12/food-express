@@ -438,6 +438,7 @@ export class RestaurantMenuComponent implements OnInit {
     this.selectedCat = category;
     this.page = 1;
     this.saveFilters();
+    this.scrollToTop();
   }
 
   goToPreviousPage(): void {
