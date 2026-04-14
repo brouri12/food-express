@@ -134,6 +134,7 @@ import { MenuItem } from '../../models/menu.model';
               Tout effacer
             </button>
           </div>
+          <p *ngIf="hasActiveFilters()" class="pb-3 text-xs text-gray-500">{{ filtersSummary() }}</p>
         </div>
       </div>
 
@@ -324,8 +325,10 @@ export class RestaurantMenuComponent implements OnInit {
     if (this.sortBy === 'priceDesc') return 'Prix décroissant';
     return 'Défaut';
   };
+  filtersSummary = () => `Vue filtrée: ${this.resultsText()} sur ${this.totalItemsCount()} éléments`;
   isCategoryCollapsed = (category: string) => !!this.collapsedCategories()[category];
   totalPages = () => Math.max(1, Math.ceil(this.displayedMenu().length / this.categoriesPerPage));
+  totalItemsCount = () => Object.values(this.menuData()).reduce((acc, items) => acc + items.length, 0);
   pagedDisplayedMenu = () => {
     const start = (this.page - 1) * this.categoriesPerPage;
     return this.displayedMenu().slice(start, start + this.categoriesPerPage);
