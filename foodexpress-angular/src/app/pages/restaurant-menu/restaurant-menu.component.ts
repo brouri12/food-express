@@ -13,7 +13,7 @@ import { MenuItem } from '../../models/menu.model';
   standalone: true,
   imports: [CommonModule, RouterLink, FormsModule],
   template: `
-    <div class="min-h-screen bg-gray-50" *ngIf="restaurant()">
+    <div class="min-h-screen bg-gray-50" *ngIf="restaurant() && !loading">
       <!-- Toast -->
       <div *ngIf="showToast"
            class="fixed top-20 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-xl z-50 flex items-center gap-2 fade-in">
@@ -235,10 +235,18 @@ import { MenuItem } from '../../models/menu.model';
     </div>
 
     <!-- Loading -->
-    <div *ngIf="!restaurant()" class="min-h-screen flex items-center justify-center">
-      <div class="text-center">
-        <div class="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p class="text-gray-600">Chargement...</p>
+    <div *ngIf="loading" class="min-h-screen bg-gray-50">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 animate-pulse">
+        <div class="h-64 md:h-80 rounded-2xl bg-gray-200"></div>
+        <div class="h-12 rounded-xl bg-gray-200"></div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div class="lg:col-span-2 space-y-4">
+            <div class="h-32 rounded-xl bg-gray-200"></div>
+            <div class="h-32 rounded-xl bg-gray-200"></div>
+            <div class="h-32 rounded-xl bg-gray-200"></div>
+          </div>
+          <div class="h-64 rounded-xl bg-gray-200"></div>
+        </div>
       </div>
     </div>
   `
@@ -255,6 +263,7 @@ export class RestaurantMenuComponent implements OnInit {
   sortBy: 'default' | 'nameAsc' | 'priceAsc' | 'priceDesc' = 'default';
   collapsedCategories = signal<Record<string, boolean>>({});
   draftQty = signal<Record<string, number>>({});
+  loading = true;
   page = 1;
   readonly categoriesPerPage = 2;
   showToast = false;
@@ -329,7 +338,10 @@ export class RestaurantMenuComponent implements OnInit {
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id')!;
     this.restaurantService.getById(id).subscribe(r => this.restaurant.set(r));
-    this.menuService.getByRestaurant(id).subscribe(data => this.menuData.set(data));
+    this.menuService.getByRestaurant(id).subscribe(data => {
+      this.menuData.set(data);
+      this.loading = false;
+    });
   }
 
   resetFilters(): void {
