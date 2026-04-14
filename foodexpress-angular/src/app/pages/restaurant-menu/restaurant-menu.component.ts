@@ -137,7 +137,7 @@ import { MenuItem } from '../../models/menu.model';
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <!-- Items -->
           <div class="lg:col-span-2 space-y-8">
-            <p class="text-sm text-gray-500">Résultats : {{ visibleItemsCount() }} plat(s)</p>
+            <p class="text-sm text-gray-500">Résultats : {{ resultsText() }}</p>
             <div *ngIf="displayedMenu().length === 0"
                  class="bg-white rounded-xl border border-dashed border-gray-300 p-8 text-center">
               <p class="text-lg font-semibold text-gray-800 mb-2">Aucun plat trouvé</p>
@@ -289,6 +289,10 @@ export class RestaurantMenuComponent implements OnInit {
 
   menuCategories = () => Object.keys(this.menuData());
   visibleItemsCount = () => this.displayedMenu().reduce((acc, entry) => acc + entry.items.length, 0);
+  resultsText = () => {
+    const count = this.visibleItemsCount();
+    return count > 1 ? `${count} plats` : `${count} plat`;
+  };
   averageVisiblePrice = () => {
     const items = this.displayedMenu().flatMap(entry => entry.items);
     if (items.length === 0) return 0;
