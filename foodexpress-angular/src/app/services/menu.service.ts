@@ -72,6 +72,10 @@ export class MenuService {
     this.menuCache.clear();
   }
 
+  getCacheSize(): number {
+    return this.menuCache.size;
+  }
+
   private normalizeGroupedMenu(grouped: Record<string, MenuItem[]>): Record<string, MenuItem[]> {
     const normalized: Record<string, MenuItem[]> = {};
     Object.entries(grouped || {}).forEach(([category, items]) => {
