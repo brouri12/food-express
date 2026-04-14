@@ -104,6 +104,7 @@ import { MenuItem } from '../../models/menu.model';
           <div class="pb-4 grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
             <div class="text-sm text-gray-700">
               Prix max: <span class="font-semibold">{{ maxPrice }}€</span>
+              <button type="button" (click)="resetMaxPrice()" class="ml-2 text-xs text-orange-600 hover:text-orange-700">Reset</button>
             </div>
             <input type="range" min="5" max="80" step="1" [(ngModel)]="maxPrice"
                    (ngModelChange)="onFiltersChange()"
@@ -478,6 +479,11 @@ export class RestaurantMenuComponent implements OnInit {
 
   applyMaxPrice(value: number): void {
     this.maxPrice = value;
+    this.onFiltersChange();
+  }
+
+  resetMaxPrice(): void {
+    this.maxPrice = 80;
     this.onFiltersChange();
   }
 
