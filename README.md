@@ -1,108 +1,174 @@
-# 🍕 FoodExpress — Plateforme de livraison de repas
+# Promotion Service — FoodExpress
 
-Architecture micro-services Spring Cloud + Frontend Angular 17  
-Projet ESPRIT — Séances 1 à 10
+Microservice de gestion des promotions et codes promo de la plateforme FoodExpress.
+Construit avec Spring Boot 3.2 / Java 17 / PostgreSQL.
+
+---
+
+## Stack technique
+
+- Java 17 + Spring Boot 3.2
+- Spring Data JPA + PostgreSQL
+- Spring Cloud (Eureka Client, Config Client)
+- Springdoc OpenAPI (Swagger UI)
+- Micrometer + Prometheus
+- Docker / Docker Compose
+- Lombok
+
+---
+
+## Lancer le service
+
+### Standalone (sans la stack complète)
+
+```bash
+docker-compose up -d
+```
+
+Le service démarre sur `http://localhost:8084`
+Swagger UI disponible sur `http://localhost:8084/swagger-ui.html`
+
+### Dans la stack FoodExpress complète
+
+```bash
+# depuis le dossier foodexpress/
+docker-compose up -d
+```
 
 ---
 
 ## Structure du projet
 
 ```
-webfinal/
-├── foodexpress/              # Backend Spring Cloud
-│   ├── infrastructure/
-│   │   ├── eureka-server/    # Annuaire de services (port 8761)
-│   │   ├── config-server/    # Config centralisée (port 8888)
-│   │   └── api-gateway/      # Point d'entrée + CORS (port 8080)
-│   ├── services/
-│   │   ├── user-service/     # Auth JWT (port 8081)
-│   │   ├── restaurant-service/ # Restaurants + Feign (port 8082)
-│   │   ├── menu-service/     # Menus (port 8083)
-│   │   ├── promotion-service/ # Codes promo (port 8084)
-│   │   └── delivery-service/ # Livraisons + RabbitMQ (port 8085)
-│   ├── setup/
-│   │   ├── db/               # Scripts SQL d'initialisation
-│   │   ├── keycloak/         # Realm foodexpress auto-importé
-│   │   └── rabbitmq/         # Config RabbitMQ
-│   ├── monitoring/           # Prometheus + Grafana
-│   ├── docker-compose.yml    # Stack complète
-│   └── SETUP.md              # Guide de démarrage
-│
-├── foodexpress-angular/      # Frontend Angular 17
-│   ├── src/app/
-│   │   ├── pages/            # Home, Restaurants, Cart, Admin...
-│   │   ├── services/         # API services avec fallback mock
-│   │   ├── models/           # Interfaces TypeScript
-│   │   └── guards/           # Auth + Admin guards
-│   └── README.md
-│
-└── project/                  # Template React original (référence design)
+promotion-service/
+├── src/main/java/com/foodexpress/promotion/
+│   ├── PromotionServiceApplication.java   # point d'entrée Spring Boot
+│   ├── controller/
+│   │   └── PromotionController.java       # endpoints REST
+│   ├── service/
+│   │   └── PromotionService.java          # logique métier
+│   ├── repository/
+│   │   └── PromotionRepository.java       # accès base de données
+│   └── entity/
+│       └── Promotion.java                 # entité JPA
+├── src/main/resources/
+│   └── application.yml                    # configuration
+├── Dockerfile                             # build multi-stage
+├── docker-compose.yml                     # stack standalone
+└── pom.xml                                # dépendances Maven
 ```
 
 ---
 
-## Démarrage rapide
+## Endpoints API
 
-### Backend (Docker)
-```bash
-cd foodexpress
-docker-compose up -d
-```
+| Méthode | URL | Description | Auth |
+|---------|-----|-------------|------|
+| GET | `/api/promotions/public` | Toutes les promotions actives | Non |
+| GET | `/api/promotions/public/restaurant/{id}` | Promos actives d'un restaurant | Non |
+| POST | `/api/promotions/public/apply` | Appliquer un code promo | Non |
+| POST | `/api/promotions` | Créer une promotion | ADMIN |
+| PUT | `/api/promotions/{id}` | Modifier une promotion | ADMIN |
+| DELETE | `/api/promotions/{id}` | Supprimer une promotion | ADMIN |
 
-### Frontend (Angular)
-```bash
-cd foodexpress-angular
-npm install
-npx ng serve
-# → http://localhost:4200
-```
-
----
-
-## URLs
-
-| Service | URL |
-|---------|-----|
-| Frontend Angular | http://localhost:4200 |
-| API Gateway | http://localhost:8080 |
-| Swagger UI | http://localhost:8080/swagger-ui.html |
-| Eureka | http://localhost:8761 |
-| Keycloak | http://localhost:8180 (admin/admin) |
-| RabbitMQ | http://localhost:15672 (guest/guest) |
-| Grafana | http://localhost:3000 (admin/admin) |
-| pgAdmin | http://localhost:5050 (admin@fe.com/admin) |
-
----
-
-## Comptes de test
-
-| Rôle | Email | Mot de passe |
-|------|-------|--------------|
-| Admin | admin@foodexpress.com | admin123 |
-| Client | client@foodexpress.com | client123 |
-| Restaurateur | resto@foodexpress.com | resto123 |
-| Livreur | livreur@foodexpress.com | livreur123 |
-
----
-
-## Résultats des tests endpoints (24/24 OK)
+### Exemple — Appliquer un code promo
 
 ```
-[OK] POST /api/auth/register + login
-[OK] GET/POST/PUT/DELETE /api/restaurants
-[OK] GET /api/restaurants/with-menus (Feign → menu-service)
-[OK] GET /api/menus/restaurant + popular + search
-[OK] GET /api/promotions/public
-[OK] POST /api/promotions/apply (BIENVENUE20, LIVRAISON0)
-[OK] GET /api/delivery/calculate (Haversine)
-[OK] GET /api/delivery/order
-[OK] CRUD complet restaurants, menus, promotions
+POST /api/promotions/public/apply?code=BIENVENUE20&orderAmount=50.00
+```
+
+Réponse :
+```json
+{
+  "promoId": "a3f2-bc12-...",
+  "code": "BIENVENUE20",
+  "type": "PERCENTAGE",
+  "originalAmount": 50.00,
+  "discount": 10.00,
+  "finalAmount": 40.00
+}
+```
+
+### Exemple — Créer une promotion
+
+```json
+POST /api/promotions
+{
+  "title": "Bienvenue -20%",
+  "code": "BIENVENUE20",
+  "type": "PERCENTAGE",
+  "discountPercent": 20,
+  "minOrderAmount": 15.00,
+  "validFrom": "2026-01-01",
+  "validUntil": "2026-12-31",
+  "active": true
+}
 ```
 
 ---
 
-## Technologies
+## Types de promotions
 
-**Backend:** Spring Boot 3.2, Spring Cloud 2023, PostgreSQL 15, RabbitMQ 3.12, Keycloak 23  
-**Frontend:** Angular 17, TailwindCSS 3, TypeScript 5.4  
-**DevOps:** Docker, Docker Compose, Prometheus, Grafana
+| Type | Description | Champ requis |
+|------|-------------|--------------|
+| `PERCENTAGE` | Réduction en % sur le total | `discountPercent` |
+| `FIXED_AMOUNT` | Réduction d'un montant fixe en € | `discountAmount` |
+| `FREE_DELIVERY` | Livraison gratuite (2.99€ offerts) | — |
+| `BUY_ONE_GET_ONE` | 1 acheté = 1 offert (50% de réduction) | — |
+
+---
+
+## Configuration
+
+### Variables d'environnement
+
+| Variable | Valeur par défaut | Description |
+|----------|-------------------|-------------|
+| `SERVER_PORT` | `8084` | Port du service |
+| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5432/promotiondb` | URL PostgreSQL |
+| `SPRING_DATASOURCE_USERNAME` | `foodexpress` | Utilisateur DB |
+| `SPRING_DATASOURCE_PASSWORD` | `foodexpress123` | Mot de passe DB |
+| `EUREKA_CLIENT_SERVICEURL_DEFAULTZONE` | `http://eureka-server:8761/eureka/` | Registre Eureka |
+
+### Base de données
+
+```
+Host     : localhost
+Port     : 5432
+Database : promotiondb
+Username : foodexpress
+Password : foodexpress123
+```
+
+---
+
+## Monitoring
+
+| Endpoint | Description |
+|----------|-------------|
+| `/actuator/health` | État du service |
+| `/actuator/prometheus` | Métriques Prometheus |
+| `/actuator/metrics` | Métriques détaillées |
+
+Prometheus scrape `/actuator/prometheus` toutes les 15 secondes.
+Les métriques sont visualisables dans Grafana sur `http://localhost:3000`.
+
+---
+
+## Ports de la stack complète
+
+| Service | Port |
+|---------|------|
+| **Promotion Service** | **8084** |
+| API Gateway | 8080 |
+| Eureka Dashboard | 8761 |
+| Config Server | 8888 |
+| Prometheus | 9090 |
+| Grafana | 3000 |
+| pgAdmin | 5050 |
+
+---
+
+## Auteur
+
+Rahma — FoodExpress / ESPRIT
