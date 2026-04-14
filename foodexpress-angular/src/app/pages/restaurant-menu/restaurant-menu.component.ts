@@ -225,6 +225,7 @@ import { MenuItem } from '../../models/menu.model';
                   Vider cache
                 </button>
               </div>
+              <p class="text-[11px] text-gray-400 mb-2">État courant: {{ currentRestaurantCacheState() }}</p>
               <p *ngIf="cachedIdsPreview()" class="text-[11px] text-gray-400 mb-3">
                 IDs en cache: {{ cachedIdsPreview() }}
               </p>
@@ -292,6 +293,7 @@ import { MenuItem } from '../../models/menu.model';
 })
 export class RestaurantMenuComponent implements OnInit {
   private readonly MENU_FILTERS_KEY = 'fe_menu_filters_v1';
+  private currentRestaurantId = '';
   restaurant = signal<Restaurant | null>(null);
   menuData = signal<Record<string, MenuItem[]>>({});
   selectedCat: string | null = null;
@@ -324,6 +326,8 @@ export class RestaurantMenuComponent implements OnInit {
   };
   cacheSize = () => this.menuService.getCacheSize();
   cachedIdsPreview = () => this.menuService.getCachedRestaurantIds().slice(0, 3).join(', ');
+  currentRestaurantCacheState = () =>
+    this.currentRestaurantId && this.menuService.hasCachedRestaurant(this.currentRestaurantId) ? 'cache hit' : 'cache miss';
   hasActiveFilters = () =>
     !!this.selectedCat ||
     !!this.searchQuery.trim() ||
@@ -394,6 +398,7 @@ export class RestaurantMenuComponent implements OnInit {
   ngOnInit(): void {
     this.restoreFilters();
     const id = this.route.snapshot.paramMap.get('id')!;
+    this.currentRestaurantId = id;
     this.restaurantService.getById(id).subscribe(r => this.restaurant.set(r));
     this.menuService.getByRestaurant(id).subscribe(data => {
       this.menuData.set(data);
