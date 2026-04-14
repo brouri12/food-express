@@ -62,7 +62,7 @@ import { MenuItem } from '../../models/menu.model';
                     [class]="'px-4 py-2 rounded-full font-semibold whitespace-nowrap transition-all ' + (!selectedCat ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white' : 'bg-gray-100 text-gray-700')">
               Tout le menu
             </button>
-            <button *ngFor="let cat of menuCategories()"
+            <button *ngFor="let cat of menuCategories(); trackBy: trackByCategory"
                     (click)="selectCategory(cat)"
                     [class]="'px-4 py-2 rounded-full font-semibold whitespace-nowrap transition-all ' + (selectedCat === cat ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white' : 'bg-gray-100 text-gray-700')">
               {{ cat }}
@@ -138,7 +138,7 @@ import { MenuItem } from '../../models/menu.model';
                 Réinitialiser les filtres
               </button>
             </div>
-            <ng-container *ngFor="let entry of pagedDisplayedMenu()">
+            <ng-container *ngFor="let entry of pagedDisplayedMenu(); trackBy: trackByEntryCategory">
               <div>
                 <button type="button" (click)="toggleCategory(entry.category)"
                         class="w-full text-left flex items-center justify-between mb-4">
@@ -149,7 +149,7 @@ import { MenuItem } from '../../models/menu.model';
                   <span class="text-gray-500 text-xl">{{ isCategoryCollapsed(entry.category) ? '▸' : '▾' }}</span>
                 </button>
                 <div class="space-y-4" *ngIf="!isCategoryCollapsed(entry.category)">
-                  <div *ngFor="let item of entry.items"
+                  <div *ngFor="let item of entry.items; trackBy: trackByItemId"
                        [class]="'bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all ' + (!item.available ? 'opacity-60' : '')">
                     <div class="flex gap-4 p-4">
                       <div class="flex-1">
@@ -376,6 +376,10 @@ export class RestaurantMenuComponent implements OnInit {
   goToNextPage(): void {
     this.page = Math.min(this.totalPages(), this.page + 1);
   }
+
+  trackByCategory = (_: number, category: string): string => category;
+  trackByEntryCategory = (_: number, entry: { category: string }): string => entry.category;
+  trackByItemId = (_: number, item: MenuItem): string => item.id;
 
   toggleCategory(category: string): void {
     const current = this.collapsedCategories();
