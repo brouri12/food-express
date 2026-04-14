@@ -13,6 +13,7 @@ export class MenuService {
   constructor(private http: HttpClient) {}
 
   getByRestaurant(restaurantId: string): Observable<Record<string, MenuItem[]>> {
+    this.pruneExpiredCache();
     const cached = this.menuCache.get(restaurantId);
     if (cached && Date.now() - cached.ts < this.cacheTtlMs) {
       return of(cached.data);
@@ -85,6 +86,15 @@ export class MenuService {
       return;
     }
     this.menuCache.delete(restaurantId);
+  }
+
+  private pruneExpiredCache(): void {
+    const now = Date.now();
+    this.menuCache.forEach((value, key) => {
+      if (now - value.ts >= this.cacheTtlMs) {
+        this.menuCache.delete(key);
+      }
+    });
   }
 
   private normalizeItem(item: MenuItem): MenuItem {
