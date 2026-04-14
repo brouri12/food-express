@@ -7,27 +7,28 @@ import { mockMenus } from '../data/mock.data';
 
 @Injectable({ providedIn: 'root' })
 export class MenuService {
-  private readonly menuCache = new Map<string, Record<string, MenuItem[]>>();
+  private readonly menuCache = new Map<string, { data: Record<string, MenuItem[]>; ts: number }>();
+  private readonly cacheTtlMs = 5 * 60 * 1000;
 
   constructor(private http: HttpClient) {}
 
   getByRestaurant(restaurantId: string): Observable<Record<string, MenuItem[]>> {
     const cached = this.menuCache.get(restaurantId);
-    if (cached) {
-      return of(cached);
+    if (cached && Date.now() - cached.ts < this.cacheTtlMs) {
+      return of(cached.data);
     }
 
     return this.http.get<Record<string, MenuItem[]>>(API.MENUS_BY_RESTAURANT(restaurantId)).pipe(
       // Normalise les champs texte pour éviter les erreurs d'affichage/filtre.
       map(grouped => this.normalizeGroupedMenu(grouped)),
-      tap(grouped => this.menuCache.set(restaurantId, grouped)),
+      tap(grouped => this.menuCache.set(restaurantId, { data: grouped, ts: Date.now() })),
       catchError(() => {
         const mock = mockMenus[restaurantId];
         if (!mock) return of({});
         const grouped: Record<string, MenuItem[]> = {};
         mock.categories.forEach((cat: any) => { grouped[cat.name] = cat.items; });
         const normalized = this.normalizeGroupedMenu(grouped);
-        this.menuCache.set(restaurantId, normalized);
+        this.menuCache.set(restaurantId, { data: normalized, ts: Date.now() });
         return of(normalized);
       })
     );
