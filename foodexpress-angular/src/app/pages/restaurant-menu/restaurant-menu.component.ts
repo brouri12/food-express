@@ -71,11 +71,13 @@ import { MenuItem } from '../../models/menu.model';
           <div class="pb-4 grid grid-cols-1 md:grid-cols-3 gap-3">
             <input type="text"
                    [(ngModel)]="searchQuery"
+                   (ngModelChange)="onFiltersChange()"
                    (keydown)="onSearchKeyDown($event)"
                    placeholder="Rechercher un plat..."
                    aria-label="Rechercher un plat du menu"
                    class="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" />
             <select [(ngModel)]="sortBy"
+                    (ngModelChange)="onFiltersChange()"
                     aria-label="Trier les plats"
                     class="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
               <option value="default">Tri par défaut</option>
@@ -84,7 +86,7 @@ import { MenuItem } from '../../models/menu.model';
               <option value="priceDesc">Prix décroissant</option>
             </select>
             <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
-              <input type="checkbox" [(ngModel)]="onlyAvailable" aria-label="Afficher seulement les plats disponibles" class="rounded border-gray-300 text-orange-500" />
+              <input type="checkbox" [(ngModel)]="onlyAvailable" (ngModelChange)="onFiltersChange()" aria-label="Afficher seulement les plats disponibles" class="rounded border-gray-300 text-orange-500" />
               Afficher seulement les plats disponibles
             </label>
           </div>
@@ -94,14 +96,15 @@ import { MenuItem } from '../../models/menu.model';
               Prix max: <span class="font-semibold">{{ maxPrice }}€</span>
             </div>
             <input type="range" min="5" max="80" step="1" [(ngModel)]="maxPrice"
+                   (ngModelChange)="onFiltersChange()"
                    aria-label="Filtrer par prix maximum"
                    class="w-full accent-orange-500" />
             <div class="flex items-center gap-2">
-              <button type="button" (click)="onlyVegetarian = !onlyVegetarian"
+              <button type="button" (click)="onlyVegetarian = !onlyVegetarian; onFiltersChange()"
                       [class]="'px-3 py-1 rounded-full text-sm font-semibold transition-colors ' + (onlyVegetarian ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700')">
                 🌿 Végétarien
               </button>
-              <button type="button" (click)="onlyPopular = !onlyPopular"
+              <button type="button" (click)="onlyPopular = !onlyPopular; onFiltersChange()"
                       [class]="'px-3 py-1 rounded-full text-sm font-semibold transition-colors ' + (onlyPopular ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-700')">
                 ⭐ Populaire
               </button>
@@ -254,6 +257,7 @@ import { MenuItem } from '../../models/menu.model';
   `
 })
 export class RestaurantMenuComponent implements OnInit {
+  private readonly MENU_FILTERS_KEY = 'fe_menu_filters_v1';
   restaurant = signal<Restaurant | null>(null);
   menuData = signal<Record<string, MenuItem[]>>({});
   selectedCat: string | null = null;
@@ -338,6 +342,7 @@ export class RestaurantMenuComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.restoreFilters();
     const id = this.route.snapshot.paramMap.get('id')!;
     this.restaurantService.getById(id).subscribe(r => this.restaurant.set(r));
     this.menuService.getByRestaurant(id).subscribe(data => {
@@ -362,11 +367,13 @@ export class RestaurantMenuComponent implements OnInit {
     this.sortBy = 'default';
     this.selectedCat = null;
     this.page = 1;
+    this.saveFilters();
   }
 
   selectCategory(category: string | null): void {
     this.selectedCat = category;
     this.page = 1;
+    this.saveFilters();
   }
 
   goToPreviousPage(): void {
@@ -399,6 +406,11 @@ export class RestaurantMenuComponent implements OnInit {
     this.draftQty.set({ ...this.draftQty(), [itemId]: next });
   }
 
+  onFiltersChange(): void {
+    this.page = 1;
+    this.saveFilters();
+  }
+
   addToCart(item: MenuItem): void {
     const r = this.restaurant()!;
     const qty = this.getDraftQty(item.id);
@@ -414,5 +426,42 @@ export class RestaurantMenuComponent implements OnInit {
     }
     this.showToast = true;
     setTimeout(() => this.showToast = false, 3000);
+  }
+
+  private saveFilters(): void {
+    sessionStorage.setItem(this.MENU_FILTERS_KEY, JSON.stringify({
+      selectedCat: this.selectedCat,
+      searchQuery: this.searchQuery,
+      onlyAvailable: this.onlyAvailable,
+      onlyVegetarian: this.onlyVegetarian,
+      onlyPopular: this.onlyPopular,
+      maxPrice: this.maxPrice,
+      sortBy: this.sortBy
+    }));
+  }
+
+  private restoreFilters(): void {
+    const raw = sessionStorage.getItem(this.MENU_FILTERS_KEY);
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw) as {
+        selectedCat: string | null;
+        searchQuery: string;
+        onlyAvailable: boolean;
+        onlyVegetarian: boolean;
+        onlyPopular: boolean;
+        maxPrice: number;
+        sortBy: 'default' | 'nameAsc' | 'priceAsc' | 'priceDesc';
+      };
+      this.selectedCat = saved.selectedCat ?? null;
+      this.searchQuery = saved.searchQuery ?? '';
+      this.onlyAvailable = !!saved.onlyAvailable;
+      this.onlyVegetarian = !!saved.onlyVegetarian;
+      this.onlyPopular = !!saved.onlyPopular;
+      this.maxPrice = typeof saved.maxPrice === 'number' ? saved.maxPrice : 80;
+      this.sortBy = saved.sortBy ?? 'default';
+    } catch {
+      sessionStorage.removeItem(this.MENU_FILTERS_KEY);
+    }
   }
 }
