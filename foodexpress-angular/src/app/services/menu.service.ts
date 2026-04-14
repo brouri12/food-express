@@ -27,7 +27,9 @@ export class MenuService {
         const mock = mockMenus[restaurantId];
         if (!mock) return of({});
         const grouped: Record<string, MenuItem[]> = {};
-        mock.categories.forEach((cat: any) => { grouped[cat.name] = cat.items; });
+        mock.categories.forEach((cat: { name: string; items: MenuItem[] }) => {
+          grouped[cat.name] = cat.items;
+        });
         const normalized = this.normalizeGroupedMenu(grouped);
         this.menuCache.set(restaurantId, { data: normalized, ts: Date.now() });
         return of(normalized);
