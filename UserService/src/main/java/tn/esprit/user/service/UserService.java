@@ -44,6 +44,7 @@ public class UserService {
         user.setSpecialite(request.getSpecialite());
         user.setExperience(request.getExperience());
         user.setDisponibilite(request.getDisponibilite());
+        user.setDate_naissance(request.getDate_naissance());
         user.setNiveau_actuel(request.getNiveau_actuel());
         user.setStatut_etudiant(request.getStatut_etudiant());
         user.setPoste(request.getPoste());
@@ -81,6 +82,7 @@ public class UserService {
         if (request.getNiveau_actuel() != null) user.setNiveau_actuel(request.getNiveau_actuel());
         if (request.getStatut_etudiant() != null) user.setStatut_etudiant(request.getStatut_etudiant());
         if (request.getPoste() != null) user.setPoste(request.getPoste());
+        if (request.getEmail() != null) user.setEmail(request.getEmail());
 
         User updated = userRepository.save(user);
         log.info("Updated user: {}", updated.getUsername());

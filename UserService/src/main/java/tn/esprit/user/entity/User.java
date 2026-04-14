@@ -50,6 +50,8 @@ public class User {
 
     private String disponibilite;
 
+    private java.time.LocalDate date_naissance;
+
     private String niveau_actuel;
 
     private String statut_etudiant;
