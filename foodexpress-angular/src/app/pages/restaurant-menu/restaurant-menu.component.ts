@@ -72,8 +72,10 @@ import { MenuItem } from '../../models/menu.model';
             <input type="text"
                    [(ngModel)]="searchQuery"
                    placeholder="Rechercher un plat..."
+                   aria-label="Rechercher un plat du menu"
                    class="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" />
             <select [(ngModel)]="sortBy"
+                    aria-label="Trier les plats"
                     class="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
               <option value="default">Tri par défaut</option>
               <option value="nameAsc">Nom A-Z</option>
@@ -81,7 +83,7 @@ import { MenuItem } from '../../models/menu.model';
               <option value="priceDesc">Prix décroissant</option>
             </select>
             <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
-              <input type="checkbox" [(ngModel)]="onlyAvailable" class="rounded border-gray-300 text-orange-500" />
+              <input type="checkbox" [(ngModel)]="onlyAvailable" aria-label="Afficher seulement les plats disponibles" class="rounded border-gray-300 text-orange-500" />
               Afficher seulement les plats disponibles
             </label>
           </div>
@@ -90,6 +92,7 @@ import { MenuItem } from '../../models/menu.model';
               Prix max: <span class="font-semibold">{{ maxPrice }}€</span>
             </div>
             <input type="range" min="5" max="80" step="1" [(ngModel)]="maxPrice"
+                   aria-label="Filtrer par prix maximum"
                    class="w-full accent-orange-500" />
             <div class="flex items-center gap-2">
               <button type="button" (click)="onlyVegetarian = !onlyVegetarian"
@@ -158,6 +161,7 @@ import { MenuItem } from '../../models/menu.model';
                           <span class="font-bold text-lg text-gray-900">{{ item.price | number:'1.2-2' }}€</span>
                           <div *ngIf="item.available" class="flex items-center gap-2">
                             <button type="button" (click)="changeDraftQty(item.id, -1)"
+                                    [disabled]="getDraftQty(item.id) <= 1"
                                     class="w-8 h-8 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">-</button>
                             <span class="w-6 text-center text-sm font-semibold">{{ getDraftQty(item.id) }}</span>
                             <button type="button" (click)="changeDraftQty(item.id, 1)"
@@ -171,7 +175,7 @@ import { MenuItem } from '../../models/menu.model';
                         </div>
                       </div>
                       <div class="w-24 h-24 flex-shrink-0">
-                        <img [src]="item.image || item.imageUrl" [alt]="item.name"
+                        <img [src]="item.image || item.imageUrl || 'https://via.placeholder.com/96x96?text=Plat'" [alt]="item.name"
                              class="w-full h-full object-cover rounded-lg" />
                       </div>
                     </div>
