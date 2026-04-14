@@ -160,6 +160,16 @@ import { MenuItem } from '../../models/menu.model';
           <div class="lg:col-span-1">
             <div class="bg-white rounded-xl shadow-sm p-6 sticky top-40">
               <h3 class="font-bold text-gray-900 mb-4">ℹ️ Informations</h3>
+              <div class="grid grid-cols-2 gap-3 mb-4">
+                <div class="bg-orange-50 rounded-lg p-3 text-center">
+                  <p class="text-xs text-gray-500">Plats visibles</p>
+                  <p class="text-lg font-bold text-orange-600">{{ visibleItemsCount() }}</p>
+                </div>
+                <div class="bg-blue-50 rounded-lg p-3 text-center">
+                  <p class="text-xs text-gray-500">Prix moyen</p>
+                  <p class="text-lg font-bold text-blue-600">{{ averageVisiblePrice() | number:'1.2-2' }}€</p>
+                </div>
+              </div>
               <div class="space-y-3 text-sm">
                 <div class="flex justify-between">
                   <span class="text-gray-600">Commande minimum</span>
@@ -207,6 +217,13 @@ export class RestaurantMenuComponent implements OnInit {
   cartCount = this.cart.count;
 
   menuCategories = () => Object.keys(this.menuData());
+  visibleItemsCount = () => this.displayedMenu().reduce((acc, entry) => acc + entry.items.length, 0);
+  averageVisiblePrice = () => {
+    const items = this.displayedMenu().flatMap(entry => entry.items);
+    if (items.length === 0) return 0;
+    const total = items.reduce((acc, item) => acc + item.price, 0);
+    return total / items.length;
+  };
 
   displayedMenu = () => {
     const data = this.menuData();
