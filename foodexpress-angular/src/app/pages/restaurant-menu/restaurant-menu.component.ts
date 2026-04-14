@@ -397,6 +397,7 @@ export class RestaurantMenuComponent implements OnInit {
     this.restaurantService.getById(id).subscribe(r => this.restaurant.set(r));
     this.menuService.getByRestaurant(id).subscribe(data => {
       this.menuData.set(data);
+      this.ensurePageInBounds();
       this.loading = false;
     });
   }
@@ -436,10 +437,12 @@ export class RestaurantMenuComponent implements OnInit {
 
   goToPreviousPage(): void {
     this.page = Math.max(1, this.page - 1);
+    this.ensurePageInBounds();
   }
 
   goToNextPage(): void {
     this.page = Math.min(this.totalPages(), this.page + 1);
+    this.ensurePageInBounds();
   }
 
   trackByCategory = (_: number, category: string): string => category;
@@ -470,11 +473,16 @@ export class RestaurantMenuComponent implements OnInit {
 
   onFiltersChange(): void {
     this.page = 1;
+    this.ensurePageInBounds();
     this.saveFilters();
   }
 
   clearMenuCache(): void {
     this.menuService.clearMenuCache();
+  }
+
+  private ensurePageInBounds(): void {
+    this.page = Math.max(1, Math.min(this.page, this.totalPages()));
   }
 
   applyMaxPrice(value: number): void {
