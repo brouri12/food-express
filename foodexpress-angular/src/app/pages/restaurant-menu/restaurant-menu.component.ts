@@ -85,6 +85,23 @@ import { MenuItem } from '../../models/menu.model';
               Afficher seulement les plats disponibles
             </label>
           </div>
+          <div class="pb-4 grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
+            <div class="text-sm text-gray-700">
+              Prix max: <span class="font-semibold">{{ maxPrice }}€</span>
+            </div>
+            <input type="range" min="5" max="80" step="1" [(ngModel)]="maxPrice"
+                   class="w-full accent-orange-500" />
+            <div class="flex items-center gap-2">
+              <button type="button" (click)="onlyVegetarian = !onlyVegetarian"
+                      [class]="'px-3 py-1 rounded-full text-sm font-semibold transition-colors ' + (onlyVegetarian ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700')">
+                🌿 Végétarien
+              </button>
+              <button type="button" (click)="onlyPopular = !onlyPopular"
+                      [class]="'px-3 py-1 rounded-full text-sm font-semibold transition-colors ' + (onlyPopular ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-700')">
+                ⭐ Populaire
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -182,6 +199,9 @@ export class RestaurantMenuComponent implements OnInit {
   selectedCat: string | null = null;
   searchQuery = '';
   onlyAvailable = false;
+  onlyVegetarian = false;
+  onlyPopular = false;
+  maxPrice = 80;
   sortBy: 'default' | 'nameAsc' | 'priceAsc' | 'priceDesc' = 'default';
   showToast = false;
   cartCount = this.cart.count;
@@ -198,6 +218,13 @@ export class RestaurantMenuComponent implements OnInit {
         if (this.onlyAvailable) {
           items = items.filter(item => item.available);
         }
+        if (this.onlyVegetarian) {
+          items = items.filter(item => item.vegetarian);
+        }
+        if (this.onlyPopular) {
+          items = items.filter(item => item.popular);
+        }
+        items = items.filter(item => item.price <= this.maxPrice);
         if (query) {
           items = items.filter(item =>
             item.name.toLowerCase().includes(query) ||
@@ -234,6 +261,9 @@ export class RestaurantMenuComponent implements OnInit {
   resetFilters(): void {
     this.searchQuery = '';
     this.onlyAvailable = false;
+    this.onlyVegetarian = false;
+    this.onlyPopular = false;
+    this.maxPrice = 80;
     this.sortBy = 'default';
     this.selectedCat = null;
   }
