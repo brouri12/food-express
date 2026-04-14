@@ -82,6 +82,10 @@ export class MenuService {
     return Array.from(this.menuCache.keys());
   }
 
+  hasCachedRestaurant(restaurantId: string): boolean {
+    return this.menuCache.has(restaurantId);
+  }
+
   private normalizeGroupedMenu(grouped: Record<string, MenuItem[]>): Record<string, MenuItem[]> {
     const normalized: Record<string, MenuItem[]> = {};
     Object.entries(grouped || {}).forEach(([category, items]) => {
