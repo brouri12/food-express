@@ -11,7 +11,7 @@ PGUSER="$POSTGRES_USER"
 echo "🗄️  Création des bases de données FoodExpress..."
 
 # Créer les bases si elles n'existent pas
-for DB in userdb restaurantdb menudb promotiondb deliverydb; do
+for DB in userdb restaurantdb menudb promotiondb deliverydb ratingdb; do
     psql -v ON_ERROR_STOP=1 --username "$PGUSER" --dbname "postgres" <<-EOSQL
         SELECT 'CREATE DATABASE $DB'
         WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '$DB')\gexec
@@ -41,6 +41,10 @@ echo "✅ promotiondb initialisée"
 # deliverydb
 psql -v ON_ERROR_STOP=1 --username "$PGUSER" --dbname "deliverydb" -f /docker-entrypoint-initdb.d/05-init-deliverydb.sql
 echo "✅ deliverydb initialisée"
+
+# ratingdb
+psql -v ON_ERROR_STOP=1 --username "$PGUSER" --dbname "ratingdb" -f /docker-entrypoint-initdb.d/06-init-ratingdb.sql
+echo "✅ ratingdb initialisée"
 
 echo ""
 echo "🎉 Toutes les bases FoodExpress sont prêtes !"

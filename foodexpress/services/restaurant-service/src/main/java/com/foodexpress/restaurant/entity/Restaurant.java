@@ -71,6 +71,18 @@ public class Restaurant {
     @Builder.Default
     private boolean promoted = false;
 
+    // ── Fonctionnalités avancées ──────────────────────────────
+
+    // Rayon de livraison en km (null = illimité)
+    private Double deliveryRadiusKm;
+
+    // Badges : "Nouveau", "Populaire", "Éco-responsable", "Top Noté"
+    @ElementCollection
+    @CollectionTable(name = "restaurant_badges", joinColumns = @JoinColumn(name = "restaurant_id"))
+    @Column(name = "badge")
+    @Builder.Default
+    private List<String> badges = new ArrayList<>();
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

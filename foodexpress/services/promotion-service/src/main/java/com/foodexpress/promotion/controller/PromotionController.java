@@ -34,12 +34,37 @@ public class PromotionController {
     }
 
     @PostMapping("/public/apply")
-    @Operation(summary = "Appliquer un code promo (ex: BIENVENUE20)",
-               description = "Valide le code et calcule la réduction sur le montant de la commande")
+    @Operation(summary = "Appliquer un code promo",
+               description = "Valide le code et calcule la réduction. userId optionnel pour vérifier le plafond par user.")
     public ResponseEntity<Map<String, Object>> applyCode(
             @RequestParam String code,
-            @RequestParam BigDecimal orderAmount) {
-        return ResponseEntity.ok(promotionService.applyPromoCode(code, orderAmount));
+            @RequestParam BigDecimal orderAmount,
+            @RequestParam(required = false) String userId) {
+        return ResponseEntity.ok(promotionService.applyPromoCodeForUser(code, orderAmount, userId));
+    }
+
+    // ── Promos Flash ──────────────────────────────────────────
+
+    @GetMapping("/public/flash")
+    @Operation(summary = "Promotions flash actives (compte à rebours)")
+    public ResponseEntity<List<Promotion>> getFlashPromos() {
+        return ResponseEntity.ok(promotionService.getFlashPromos());
+    }
+
+    // ── Parrainage ────────────────────────────────────────────
+
+    @PostMapping("/referral/generate")
+    @Operation(summary = "Générer un code de parrainage pour un utilisateur")
+    public ResponseEntity<Promotion> generateReferral(
+            @RequestParam String userId,
+            @RequestParam String userName) {
+        return ResponseEntity.ok(promotionService.generateReferralCode(userId, userName));
+    }
+
+    @GetMapping("/referral/{userId}")
+    @Operation(summary = "Codes de parrainage d'un utilisateur")
+    public ResponseEntity<List<Promotion>> getReferralCodes(@PathVariable String userId) {
+        return ResponseEntity.ok(promotionService.getReferralCodes(userId));
     }
 
     @PostMapping

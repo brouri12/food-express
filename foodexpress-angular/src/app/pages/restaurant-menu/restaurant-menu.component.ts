@@ -1,27 +1,38 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { RestaurantService } from '../../services/restaurant.service';
 import { MenuService } from '../../services/menu.service';
 import { CartService } from '../../services/cart.service';
+import { RatingService } from '../../services/rating.service';
+import { AuthService } from '../../services/auth.service';
 import { Restaurant } from '../../models/restaurant.model';
 import { MenuItem } from '../../models/menu.model';
+import { Rating, CreateRatingRequest } from '../../models/rating.model';
+import { SafeImgPipe } from '../../shared/safe-img.pipe';
 
 @Component({
   selector: 'app-restaurant-menu',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, FormsModule, SafeImgPipe],
   template: `
     <div class="min-h-screen bg-gray-50" *ngIf="restaurant()">
-      <!-- Toast -->
+      <!-- Toast panier -->
       <div *ngIf="showToast"
            class="fixed top-20 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-xl z-50 flex items-center gap-2 fade-in">
         🛒 Ajouté au panier !
       </div>
+      <!-- Toast rating -->
+      <div *ngIf="showRatingToast"
+           class="fixed top-20 right-4 bg-orange-500 text-white px-6 py-3 rounded-lg shadow-xl z-50 flex items-center gap-2 fade-in">
+        ⭐ Merci pour votre avis !
+      </div>
 
       <!-- Hero Image -->
       <div class="relative h-64 md:h-80 bg-gray-900">
-        <img [src]="restaurant()!.image" [alt]="restaurant()!.name"
+        <img [src]="(restaurant()!.imageUrl || restaurant()!.image) | safeImg:'restaurant'"
+             [alt]="restaurant()!.name"
              class="w-full h-full object-cover opacity-80" />
         <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
         <a routerLink="/restaurants"
@@ -36,18 +47,20 @@ import { MenuItem } from '../../models/menu.model';
             </span>
             <h1 class="text-3xl md:text-4xl font-bold mb-3">{{ restaurant()!.name }}</h1>
             <div class="flex flex-wrap items-center gap-4 text-sm md:text-base">
+              <!-- Rating display -->
               <div class="flex items-center gap-1">
-                ⭐ <span class="font-semibold">{{ restaurant()!.rating }}</span>
-                <span class="text-white/80">({{ restaurant()!.ratingCount }} avis)</span>
+                <span class="text-yellow-400 text-lg">
+                  <ng-container *ngFor="let s of [1,2,3,4,5]; let i=index">
+                    <span [class.text-yellow-400]="i < (ratingAverage?.average || 0)"
+                          [class.text-gray-400]="i >= (ratingAverage?.average || 0)">★</span>
+                  </ng-container>
+                </span>
+                <span class="font-semibold">{{ ratingAverage?.average | number:'1.1-1' }}</span>
+                <span class="text-white/80">({{ ratingAverage?.count || 0 }} avis)</span>
               </div>
-              <div class="flex items-center gap-1 text-white/90">
-                🕐 {{ restaurant()!.deliveryTime }} min
-              </div>
-              <div class="flex items-center gap-1 text-white/90">
-                📍 Livraison : {{ restaurant()!.deliveryFee | number:'1.2-2' }}€
-              </div>
+              <div class="flex items-center gap-1 text-white/90">🕐 {{ restaurant()!.deliveryTime }} min</div>
+              <div class="flex items-center gap-1 text-white/90">📍 {{ restaurant()!.deliveryFee | number:'1.2-2' }}€</div>
             </div>
-            <p class="mt-2 text-white/80">{{ restaurant()!.description }}</p>
           </div>
         </div>
       </div>
@@ -70,11 +83,102 @@ import { MenuItem } from '../../models/menu.model';
         </div>
       </div>
 
-      <!-- Menu Content -->
+      <!-- Content -->
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <!-- Items -->
+
+          <!-- Menu Items -->
           <div class="lg:col-span-2 space-y-8">
+
+            <!-- ⭐ RATINGS SECTION ─────────────────────────────── -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+              <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  ⭐ Avis clients
+                  <span class="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full font-normal">
+                    API: Rating Service
+                  </span>
+                </h2>
+                <button *ngIf="!hasRated && !showRatingForm"
+                        (click)="showRatingForm = true"
+                        class="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-lg font-semibold hover:from-orange-600 hover:to-red-600 transition-all text-sm">
+                  + Laisser un avis
+                </button>
+                <div *ngIf="hasRated" class="text-green-600 text-sm font-semibold flex items-center gap-1">
+                  ✅ Vous avez noté ce restaurant
+                </div>
+              </div>
+
+              <!-- Rating Form -->
+              <div *ngIf="showRatingForm && !hasRated"
+                   class="bg-orange-50 border border-orange-200 rounded-xl p-5 mb-5">
+                <h3 class="font-bold text-gray-900 mb-4">⭐ Noter ce restaurant</h3>
+                <!-- Star picker -->
+                <div class="mb-4">
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">Note</label>
+                  <div class="flex gap-1">
+                    <button *ngFor="let s of [1,2,3,4,5]; let i=index"
+                            type="button"
+                            (click)="newRating.note = i + 1"
+                            class="text-3xl transition-transform hover:scale-110 cursor-pointer">
+                      <span [class.text-yellow-400]="newRating.note > i"
+                            [class.text-gray-300]="newRating.note <= i">★</span>
+                    </button>
+                    <span class="ml-2 text-gray-600 self-center font-semibold">{{ newRating.note }}/5</span>
+                  </div>
+                </div>
+                <!-- Comment -->
+                <div class="mb-4">
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">Commentaire (optionnel)</label>
+                  <textarea [(ngModel)]="newRating.commentaire" rows="3" maxlength="500"
+                            placeholder="Que pensez-vous de ce restaurant ?"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"></textarea>
+                  <p class="text-xs text-gray-400 mt-1">{{ (newRating.commentaire || '').length }}/500</p>
+                </div>
+                <div class="flex gap-3">
+                  <button (click)="showRatingForm = false"
+                          class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                    Annuler
+                  </button>
+                  <button (click)="submitRating()"
+                          [disabled]="submittingRating"
+                          class="flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-lg font-semibold hover:from-orange-600 hover:to-red-600 transition-all disabled:opacity-60">
+                    {{ submittingRating ? 'Envoi...' : 'Envoyer' }}
+                  </button>
+                </div>
+                <p *ngIf="ratingError" class="text-red-500 text-sm mt-2">{{ ratingError }}</p>
+              </div>
+
+              <!-- Ratings list -->
+              <div *ngIf="ratings().length > 0" class="space-y-3 max-h-80 overflow-y-auto">
+                <div *ngFor="let r of ratings()"
+                     class="border border-gray-100 rounded-lg p-4 hover:border-orange-200 transition-colors">
+                  <div class="flex items-center gap-2 mb-2">
+                    <div class="flex gap-0.5">
+                      <span *ngFor="let s of [1,2,3,4,5]; let i=index"
+                            [class.text-yellow-400]="i < r.note"
+                            [class.text-gray-300]="i >= r.note"
+                            class="text-lg">★</span>
+                    </div>
+                    <span class="text-sm font-semibold text-gray-700">{{ r.note }}/5</span>
+                    <span class="text-xs text-gray-400 ml-auto">{{ r.dateCreation | date:'dd/MM/yyyy' }}</span>
+                  </div>
+                  <p *ngIf="r.commentaire" class="text-gray-700 text-sm">{{ r.commentaire }}</p>
+                  <p class="text-xs text-gray-400 mt-1">👤 {{ r.userId }}</p>
+                </div>
+              </div>
+              <div *ngIf="ratings().length === 0 && !loadingRatings"
+                   class="text-center py-6 text-gray-400">
+                <div class="text-4xl mb-2">⭐</div>
+                <p class="text-sm">Aucun avis pour l'instant. Soyez le premier !</p>
+              </div>
+              <div *ngIf="loadingRatings" class="text-center py-4">
+                <div class="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+              </div>
+            </div>
+            <!-- ─────────────────────────────────────────────────── -->
+
+            <!-- Menu items -->
             <ng-container *ngFor="let entry of displayedMenu()">
               <div>
                 <h2 class="text-2xl font-bold text-gray-900 mb-4">{{ entry.category }}</h2>
@@ -87,10 +191,20 @@ import { MenuItem } from '../../models/menu.model';
                           <h4 class="font-semibold text-gray-900 flex-1">{{ item.name }}</h4>
                           <span *ngIf="item.popular" class="bg-orange-100 text-orange-600 text-xs font-bold px-2 py-1 rounded-full">⭐ Populaire</span>
                           <span *ngIf="item.vegetarian" class="text-green-600 text-sm">🌿</span>
+                          <!-- Happy Hour badge -->
+                          <span *ngIf="item.happyHourActive"
+                                class="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded-full animate-pulse">
+                            🎉 -{{ item.happyHourDiscountPercent }}% Happy Hour
+                          </span>
                         </div>
                         <p class="text-gray-600 text-sm mb-3 line-clamp-2">{{ item.description }}</p>
                         <div class="flex items-center justify-between">
-                          <span class="font-bold text-lg text-gray-900">{{ item.price | number:'1.2-2' }}€</span>
+                          <div>
+                            <span class="font-bold text-lg text-gray-900">{{ item.price | number:'1.2-2' }}€</span>
+                            <!-- Happy Hour: show original price crossed out -->
+                            <span *ngIf="item.happyHourActive"
+                                  class="ml-2 text-sm text-gray-400 line-through">{{ item.originalPrice | number:'1.2-2' }}€</span>
+                          </div>
                           <button *ngIf="item.available" (click)="addToCart(item)"
                                   class="bg-gradient-to-r from-orange-500 to-red-500 text-white p-2 rounded-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-md">
                             +
@@ -99,7 +213,8 @@ import { MenuItem } from '../../models/menu.model';
                         </div>
                       </div>
                       <div class="w-24 h-24 flex-shrink-0">
-                        <img [src]="item.image || item.imageUrl" [alt]="item.name"
+                        <img [src]="(item.imageUrl || item.image) | safeImg:'menu'"
+                             [alt]="item.name"
                              class="w-full h-full object-cover rounded-lg" />
                       </div>
                     </div>
@@ -125,6 +240,12 @@ import { MenuItem } from '../../models/menu.model';
                 <div class="flex justify-between">
                   <span class="text-gray-600">Temps de livraison</span>
                   <span class="font-semibold">{{ restaurant()!.deliveryTime }} min</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Note moyenne</span>
+                  <span class="font-semibold text-orange-600">
+                    ⭐ {{ ratingAverage?.average | number:'1.1-1' }} ({{ ratingAverage?.count || 0 }})
+                  </span>
                 </div>
               </div>
               <a *ngIf="cartCount() > 0" routerLink="/cart"
@@ -153,6 +274,17 @@ export class RestaurantMenuComponent implements OnInit {
   showToast = false;
   cartCount = this.cart.count;
 
+  // Rating state
+  ratings = signal<Rating[]>([]);
+  ratingAverage: { average: number; count: number; restaurantId: string } | null = null;
+  loadingRatings = false;
+  showRatingForm = false;
+  showRatingToast = false;
+  hasRated = false;
+  submittingRating = false;
+  ratingError = '';
+  newRating: CreateRatingRequest = { restaurantId: '', note: 5, commentaire: '' };
+
   menuCategories = () => Object.keys(this.menuData());
 
   displayedMenu = () => {
@@ -165,13 +297,67 @@ export class RestaurantMenuComponent implements OnInit {
     private route: ActivatedRoute,
     private restaurantService: RestaurantService,
     private menuService: MenuService,
-    private cart: CartService
+    private cart: CartService,
+    private ratingService: RatingService,
+    private auth: AuthService
   ) {}
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id')!;
+    this.newRating.restaurantId = id;
+
     this.restaurantService.getById(id).subscribe(r => this.restaurant.set(r));
     this.menuService.getByRestaurant(id).subscribe(data => this.menuData.set(data));
+    this.loadRatings(id);
+    this.loadAverage(id);
+  }
+
+  loadRatings(restaurantId: string): void {
+    this.loadingRatings = true;
+    this.ratingService.getRatingsByRestaurant(restaurantId).subscribe(data => {
+      this.ratings.set(data);
+      this.loadingRatings = false;
+      // Vérifier si l'utilisateur courant a déjà noté
+      const userId = this.auth.currentUser()?.userId;
+      if (userId) {
+        this.hasRated = data.some(r => r.userId === userId);
+      }
+    });
+  }
+
+  loadAverage(restaurantId: string): void {
+    this.ratingService.getAverageByRestaurant(restaurantId).subscribe(avg => {
+      this.ratingAverage = avg;
+    });
+  }
+
+  submitRating(): void {
+    if (!this.newRating.note || this.newRating.note < 1 || this.newRating.note > 5) {
+      this.ratingError = 'La note doit être entre 1 et 5';
+      return;
+    }
+    this.submittingRating = true;
+    this.ratingError = '';
+    const userId = this.auth.currentUser()?.userId;
+
+    this.ratingService.createRating(this.newRating, userId).subscribe({
+      next: () => {
+        this.submittingRating = false;
+        this.showRatingForm = false;
+        this.hasRated = true;
+        this.showRatingToast = true;
+        setTimeout(() => this.showRatingToast = false, 3000);
+        // Recharger les avis et la moyenne
+        const id = this.route.snapshot.paramMap.get('id')!;
+        this.loadRatings(id);
+        this.loadAverage(id);
+        this.newRating = { restaurantId: id, note: 5, commentaire: '' };
+      },
+      error: (err) => {
+        this.submittingRating = false;
+        this.ratingError = err.error || 'Erreur lors de l\'envoi de l\'avis';
+      }
+    });
   }
 
   addToCart(item: MenuItem): void {
@@ -181,7 +367,9 @@ export class RestaurantMenuComponent implements OnInit {
       restaurantId: r.id,
       restaurantName: r.name,
       name: item.name,
-      price: item.price,
+      price: item.price,                          // effective price (discounted if happy hour)
+      originalPrice: item.originalPrice,
+      happyHour: item.happyHourActive,
       image: item.image || item.imageUrl || '',
     });
     this.showToast = true;

@@ -15,3 +15,17 @@ export const adminGuard: CanActivateFn = () => {
   inject(Router).navigate(['/']);
   return false;
 };
+
+export const driverGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  if (auth.isDriver() || auth.isAdmin()) return true;
+  inject(Router).navigate(['/']);
+  return false;
+};
+
+export const restaurateurGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  if (auth.isRestaurateur() || auth.isAdmin()) return true;
+  inject(Router).navigate(['/']);
+  return false;
+};

@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
@@ -15,6 +17,18 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserRepository userRepository;
+
+    @GetMapping
+    @Operation(summary = "Tous les utilisateurs (ADMIN)")
+    public ResponseEntity<List<User>> getAll() {
+        return ResponseEntity.ok(userRepository.findAll());
+    }
+
+    @GetMapping("/role/{role}")
+    @Operation(summary = "Utilisateurs par rôle (ADMIN)")
+    public ResponseEntity<List<User>> getByRole(@PathVariable String role) {
+        return ResponseEntity.ok(userRepository.findByRole(User.Role.valueOf(role.toUpperCase())));
+    }
 
     @GetMapping("/me")
     @Operation(summary = "Mon profil (email en query param)")

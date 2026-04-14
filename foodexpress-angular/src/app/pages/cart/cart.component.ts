@@ -1,10 +1,13 @@
 import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { RouterLink, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CartService } from '../../services/cart.service';
 import { PromotionService } from '../../services/promotion.service';
+import { OrderService } from '../../services/order.service';
+import { AuthService } from '../../services/auth.service';
 import { PromoApplyResult } from '../../models/promotion.model';
+import { CreateOrderRequest } from '../../models/order.model';
 
 @Component({
   selector: 'app-cart',
@@ -48,8 +51,16 @@ import { PromoApplyResult } from '../../models/promotion.model';
                     <img [src]="item.image" [alt]="item.name" class="w-20 h-20 object-cover rounded-lg" />
                     <div class="flex-1">
                       <h3 class="font-semibold text-gray-900">{{ item.name }}</h3>
+                      <span *ngIf="item.happyHour" class="inline-block text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-semibold mb-1">
+                        🎉 Happy Hour
+                      </span>
                       <p class="text-sm text-gray-600">{{ item.restaurantName }}</p>
-                      <p class="text-orange-600 font-bold mt-1">{{ item.price | number:'1.2-2' }}€</p>
+                      <div class="flex items-center gap-2 mt-1">
+                        <p class="text-orange-600 font-bold">{{ item.price | number:'1.2-2' }}€</p>
+                        <p *ngIf="item.happyHour && item.originalPrice" class="text-gray-400 text-sm line-through">
+                          {{ item.originalPrice | number:'1.2-2' }}€
+                        </p>
+                      </div>
                     </div>
                     <div class="flex items-center gap-3">
                       <div class="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
@@ -148,9 +159,12 @@ import { PromoApplyResult } from '../../models/promotion.model';
                 </div>
 
                 <button (click)="checkout()"
-                        class="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-xl font-semibold hover:from-orange-600 hover:to-red-600 transition-all shadow-lg flex items-center justify-center gap-2">
-                  Commander →
+                        [disabled]="checkingOut"
+                        class="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-xl font-semibold hover:from-orange-600 hover:to-red-600 transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-60">
+                  <span *ngIf="checkingOut" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  {{ checkingOut ? 'Commande en cours...' : 'Commander →' }}
                 </button>
+                <p *ngIf="orderError" class="text-red-500 text-xs text-center mt-2">{{ orderError }}</p>
                 <p class="text-xs text-gray-500 text-center mt-4">En commandant, vous acceptez nos conditions</p>
               </div>
             </div>
@@ -165,6 +179,8 @@ export class CartComponent {
   promoError = '';
   promoResult = signal<PromoApplyResult | null>(null);
   deliveryFee = 2.50;
+  checkingOut = false;
+  orderError = '';
 
   total = () => {
     const sub = this.cart.subtotal() + this.deliveryFee;
@@ -172,7 +188,13 @@ export class CartComponent {
     return Math.max(0, sub - disc);
   };
 
-  constructor(public cart: CartService, private promotionService: PromotionService) {}
+  constructor(
+    public cart: CartService,
+    private promotionService: PromotionService,
+    private orderService: OrderService,
+    private auth: AuthService,
+    private router: Router
+  ) {}
 
   applyPromo(): void {
     this.promoError = '';
@@ -183,7 +205,41 @@ export class CartComponent {
   }
 
   checkout(): void {
-    this.cart.clear();
-    window.location.href = '/delivery/order-2';
+    if (this.cart.count() === 0 || this.checkingOut) return;
+    this.checkingOut = true;
+    this.orderError = '';
+
+    const user = this.auth.currentUser();
+    const items = this.cart.items();
+    const firstItem = items[0];
+
+    const orderRequest: CreateOrderRequest = {
+      userId:          user?.userId || 'dev-user-001',
+      clientName:      user ? `${user.firstName} ${user.lastName}` : 'Client',
+      restaurantId:    firstItem.restaurantId,
+      restaurantName:  firstItem.restaurantName,
+      deliveryAddress: '15 Rue de la Paix, 75002 Paris',
+      items: items.map(i => ({
+        menuItemId:   i.id,
+        menuItemName: i.name,
+        quantity:     i.quantity,
+        unitPrice:    i.price,
+      })),
+      promoCode: this.promoResult()?.code,
+      discount:  this.promoResult()?.discount,
+    };
+
+    this.orderService.createOrder(orderRequest).subscribe({
+      next: (order) => {
+        this.cart.clear();
+        this.checkingOut = false;
+        this.router.navigate(['/orders']);
+      },
+      error: (err) => {
+        this.checkingOut = false;
+        this.orderError = 'Erreur lors de la commande. Veuillez réessayer.';
+        console.error(err);
+      }
+    });
   }
 }

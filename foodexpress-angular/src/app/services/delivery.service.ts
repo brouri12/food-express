@@ -9,6 +9,23 @@ import { mockDelivery } from '../data/mock.data';
 export class DeliveryService {
   constructor(private http: HttpClient) {}
 
+  getAll(): Observable<Delivery[]> {
+    return this.http.get<Delivery[]>(API.DELIVERY_ALL).pipe(catchError(() => of([])));
+  }
+
+  getPending(): Observable<Delivery[]> {
+    return this.http.get<Delivery[]>(API.DELIVERY_PENDING).pipe(catchError(() => of([])));
+  }
+
+  getMyDeliveries(driverId: string): Observable<Delivery[]> {
+    return this.http.get<Delivery[]>(API.DELIVERY_MY, { params: { driverId } }).pipe(catchError(() => of([])));
+  }
+
+  assignSelf(orderId: string, driverId: string, driverName: string, driverPhone: string): Observable<Delivery> {
+    const params = { driverId, driverName, driverPhone };
+    return this.http.put<Delivery>(API.DELIVERY_ASSIGN(orderId), null, { params });
+  }
+
   getByOrder(orderId: string): Observable<Delivery> {
     return this.http.get<Delivery>(API.DELIVERY_BY_ORDER(orderId)).pipe(
       catchError(() => of(mockDelivery as unknown as Delivery))

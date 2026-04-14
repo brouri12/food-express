@@ -86,6 +86,8 @@ export class AdminLayoutComponent {
     { path: '/admin/promotions', icon: '🏷️', label: 'Promotions' },
     { path: '/admin/deliveries', icon: '🛵', label: 'Livraisons' },
     { path: '/admin/users', icon: '👥', label: 'Utilisateurs' },
+    { path: '/admin/ratings', icon: '⭐', label: 'Avis & Notes' },
+    { path: '/admin/orders', icon: '📦', label: 'Commandes' },
   ];
 
   constructor(public auth: AuthService) {}

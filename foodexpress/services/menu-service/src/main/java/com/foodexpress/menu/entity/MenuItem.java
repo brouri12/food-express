@@ -7,6 +7,9 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "menu_items")
@@ -35,7 +38,7 @@ public class MenuItem {
     private String imageUrl;
 
     @Column(nullable = false)
-    private String category; // Entrées, Plats, Desserts, Boissons...
+    private String category;
 
     @Builder.Default
     private boolean popular = false;
@@ -51,6 +54,24 @@ public class MenuItem {
 
     @Builder.Default
     private boolean available = true;
+
+    // ── Gestion des stocks ────────────────────────────────────
+    // null = illimité, 0 = rupture
+    private Integer stockQuantity;
+
+    @Builder.Default
+    private Integer stockAlertThreshold = 5; // alerte si stock <= seuil
+
+    // ── Options / Suppléments ─────────────────────────────────
+    // JSON stocké : [{"name":"Sauce BBQ","price":0.50},{"name":"Extra fromage","price":1.00}]
+    @Column(length = 2000)
+    private String optionsJson;
+
+    // ── Prix dynamique (Happy Hour) ───────────────────────────
+    // Réduction en % applicable entre happyHourStart et happyHourEnd
+    private Integer happyHourDiscountPercent;
+    private LocalTime happyHourStart;
+    private LocalTime happyHourEnd;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

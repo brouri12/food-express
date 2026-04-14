@@ -35,9 +35,21 @@ import { AuthService } from '../services/auth.service';
                  class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-gray-700 hover:text-orange-600 hover:bg-gray-50">
                 🏪 Restaurants
               </a>
+              <a routerLink="/orders" routerLinkActive="text-orange-600 bg-orange-50"
+                 class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-gray-700 hover:text-orange-600 hover:bg-gray-50">
+                📦 Mes commandes
+              </a>
               <a *ngIf="auth.isAdmin()" routerLink="/admin" routerLinkActive="text-orange-600 bg-orange-50"
                  class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-gray-700 hover:text-orange-600 hover:bg-gray-50">
                 ⚙️ Admin
+              </a>
+              <a *ngIf="auth.isDriver()" routerLink="/driver" routerLinkActive="text-orange-600 bg-orange-50"
+                 class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-gray-700 hover:text-orange-600 hover:bg-gray-50">
+                🛵 Mes livraisons
+              </a>
+              <a *ngIf="auth.isRestaurateur()" routerLink="/restaurant-dashboard" routerLinkActive="text-orange-600 bg-orange-50"
+                 class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-gray-700 hover:text-orange-600 hover:bg-gray-50">
+                🍽️ Mon Restaurant
               </a>
             </nav>
 
@@ -52,10 +64,43 @@ import { AuthService } from '../services/auth.service';
               </a>
 
               <ng-container *ngIf="auth.isLoggedIn(); else guestActions">
-                <a routerLink="/profile"
-                   class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-md">
-                  👤 {{ auth.currentUser()?.firstName }}
-                </a>
+                <!-- User menu avec dropdown (click) -->
+                <div class="relative">
+                  <button (click)="showMenu = !showMenu"
+                          class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-md">
+                    👤 {{ auth.currentUser()?.firstName }}
+                    <span class="text-xs opacity-80">{{ showMenu ? '▴' : '▾' }}</span>
+                  </button>
+                  <!-- Overlay transparent pour fermer en cliquant ailleurs -->
+                  <div *ngIf="showMenu"
+                       class="fixed inset-0 z-40"
+                       (click)="showMenu = false"></div>
+                  <!-- Dropdown -->
+                  <div *ngIf="showMenu"
+                       class="absolute right-0 top-full mt-2 w-52 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50">
+                    <a routerLink="/orders" (click)="showMenu=false"
+                       class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors">
+                      📦 Mes commandes
+                    </a>
+                    <a *ngIf="auth.isAdmin()" routerLink="/admin" (click)="showMenu=false"
+                       class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors">
+                      ⚙️ Dashboard Admin
+                    </a>
+                    <a *ngIf="auth.isDriver()" routerLink="/driver" (click)="showMenu=false"
+                       class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors">
+                      🛵 Mes livraisons
+                    </a>
+                    <a *ngIf="auth.isRestaurateur()" routerLink="/restaurant-dashboard" (click)="showMenu=false"
+                       class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors">
+                      🍽️ Mon Restaurant
+                    </a>
+                    <div class="border-t border-gray-100 my-1"></div>
+                    <button (click)="logout()"
+                            class="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                      🚪 Se déconnecter
+                    </button>
+                  </div>
+                </div>
               </ng-container>
               <ng-template #guestActions>
                 <a routerLink="/login" class="text-gray-700 font-medium hover:text-orange-600 px-3 py-2 hidden md:block">
@@ -100,6 +145,10 @@ import { AuthService } from '../services/auth.service';
              class="flex flex-col items-center gap-1 py-2 px-3 text-gray-600">
             <span>👤</span><span class="text-xs font-medium">Profil</span>
           </a>
+          <button *ngIf="auth.isLoggedIn()" (click)="logout()"
+                  class="flex flex-col items-center gap-1 py-2 px-3 text-red-500">
+            <span>🚪</span><span class="text-xs font-medium">Quitter</span>
+          </button>
         </div>
       </nav>
     </div>
@@ -107,5 +156,12 @@ import { AuthService } from '../services/auth.service';
 })
 export class LayoutComponent {
   cartCount = this.cart.count;
+  showMenu = false;
+
   constructor(public cart: CartService, public auth: AuthService) {}
+
+  logout(): void {
+    this.showMenu = false;
+    this.auth.logout();
+  }
 }

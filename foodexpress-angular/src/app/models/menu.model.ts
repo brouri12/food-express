@@ -4,6 +4,7 @@ export interface MenuItem {
   name: string;
   description: string;
   price: number;
+  originalPrice?: number;       // prix de base avant happy hour
   imageUrl?: string;
   image?: string;
   category: string;
@@ -12,6 +13,10 @@ export interface MenuItem {
   vegan?: boolean;
   glutenFree?: boolean;
   available: boolean;
+  happyHourActive?: boolean;
+  happyHourDiscountPercent?: number;
+  happyHourEnd?: string;
+  stockQuantity?: number;
 }
 
 export interface MenuCategory {

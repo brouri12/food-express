@@ -1,14 +1,17 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { RestaurantService } from '../../../services/restaurant.service';
 import { AuthService } from '../../../services/auth.service';
 import { Restaurant } from '../../../models/restaurant.model';
+import { SafeImgPipe } from '../../../shared/safe-img.pipe';
+import { API_BASE } from '../../../services/api.config';
 
 @Component({
   selector: 'app-admin-restaurants',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SafeImgPipe],
   template: `
     <div class="space-y-6 fade-in">
       <div class="flex items-center justify-between">
@@ -37,6 +40,7 @@ import { Restaurant } from '../../../models/restaurant.model';
               <th class="text-left px-6 py-4 text-sm font-semibold text-gray-700">Cuisine</th>
               <th class="text-left px-6 py-4 text-sm font-semibold text-gray-700">Note</th>
               <th class="text-left px-6 py-4 text-sm font-semibold text-gray-700">Livraison</th>
+              <th class="text-left px-6 py-4 text-sm font-semibold text-gray-700">Propriétaire</th>
               <th class="text-left px-6 py-4 text-sm font-semibold text-gray-700">Statut</th>
               <th class="text-left px-6 py-4 text-sm font-semibold text-gray-700">Actions</th>
             </tr>
@@ -45,7 +49,7 @@ import { Restaurant } from '../../../models/restaurant.model';
             <tr *ngFor="let r of filtered()" class="hover:bg-gray-50 transition-colors">
               <td class="px-6 py-4">
                 <div class="flex items-center gap-3">
-                  <img [src]="r.image" [alt]="r.name" class="w-12 h-12 rounded-lg object-cover" />
+                  <img [src]="(r.imageUrl || r.image) | safeImg:'restaurant'" [alt]="r.name" class="w-12 h-12 rounded-lg object-cover" />
                   <div>
                     <p class="font-semibold text-gray-900">{{ r.name }}</p>
                     <p class="text-xs text-gray-500">{{ r.id }}</p>
@@ -57,6 +61,12 @@ import { Restaurant } from '../../../models/restaurant.model';
                 <span class="flex items-center gap-1">⭐ {{ r.rating }} ({{ r.ratingCount }})</span>
               </td>
               <td class="px-6 py-4 text-gray-700">{{ r.deliveryTime }} min • {{ r.deliveryFee | number:'1.2-2' }}€</td>
+              <td class="px-6 py-4">
+                <span *ngIf="ownerName(r.ownerId)" class="text-sm text-purple-700 font-medium">
+                  🍴 {{ ownerName(r.ownerId) }}
+                </span>
+                <span *ngIf="!ownerName(r.ownerId)" class="text-xs text-gray-400">Non assigné</span>
+              </td>
               <td class="px-6 py-4">
                 <span [class]="'px-2 py-1 rounded-full text-xs font-semibold ' + (r.active !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')">
                   {{ r.active !== false ? 'Actif' : 'Inactif' }}
@@ -122,8 +132,27 @@ import { Restaurant } from '../../../models/restaurant.model';
           </div>
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-1">URL Image</label>
-            <input type="url" [(ngModel)]="form.image" name="image"
+            <input type="url" [(ngModel)]="form.imageUrl" name="imageUrl"
+                   placeholder="https://images.unsplash.com/..."
                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" />
+            <!-- Live preview -->
+            <div *ngIf="form.imageUrl" class="mt-2 h-24 rounded-lg overflow-hidden border border-gray-200">
+              <img [src]="form.imageUrl | safeImg:'restaurant'" class="w-full h-full object-cover" alt="preview" />
+            </div>
+          </div>
+          <!-- Owner Assignment -->
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <label class="block text-sm font-semibold text-blue-800 mb-2">👤 Associer à un restaurateur</label>
+            <select [(ngModel)]="form.ownerId" name="ownerId"
+                    class="w-full px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+              <option value="">— Aucun propriétaire —</option>
+              <option *ngFor="let u of restaurateurs()" [value]="u.id">
+                {{ u.firstName }} {{ u.lastName }} ({{ u.email }})
+              </option>
+            </select>
+            <p *ngIf="form.ownerId" class="text-xs text-blue-600 mt-1">
+              ✅ Ce restaurant sera visible dans le dashboard de ce restaurateur
+            </p>
           </div>
           <div class="flex items-center gap-4">
             <label class="flex items-center gap-2 cursor-pointer">
@@ -153,6 +182,7 @@ import { Restaurant } from '../../../models/restaurant.model';
 export class AdminRestaurantsComponent implements OnInit {
   loading = signal(true);
   restaurants = signal<Restaurant[]>([]);
+  restaurateurs = signal<any[]>([]);
   search = '';
   showModal = false;
   editing: Restaurant | null = null;
@@ -162,10 +192,15 @@ export class AdminRestaurantsComponent implements OnInit {
     !this.search || r.name.toLowerCase().includes(this.search.toLowerCase())
   );
 
-  constructor(private restaurantService: RestaurantService, private auth: AuthService) {}
+  constructor(private restaurantService: RestaurantService, private auth: AuthService, private http: HttpClient) {}
 
   ngOnInit(): void {
     this.restaurantService.getAll().subscribe(d => { this.restaurants.set(d); this.loading.set(false); });
+    // Load restaurateurs for owner assignment dropdown
+    this.http.get<any[]>(`${API_BASE}/api/users/role/RESTAURATEUR`).subscribe({
+      next: users => this.restaurateurs.set(users),
+      error: () => this.restaurateurs.set([])
+    });
   }
 
   openModal(): void { this.editing = null; this.form = this.emptyForm(); this.showModal = true; }
@@ -173,17 +208,46 @@ export class AdminRestaurantsComponent implements OnInit {
   editRestaurant(r: Restaurant): void { this.editing = r; this.form = { ...r }; this.showModal = true; }
 
   saveRestaurant(): void {
-    // Mapper deliveryTime → deliveryTimeRange pour l'API Spring
-    const payload = { ...this.form, deliveryTimeRange: this.form.deliveryTime || this.form.deliveryTimeRange };
+    const payload: Partial<Restaurant> = {
+      name: this.form.name,
+      description: this.form.description,
+      cuisine: this.form.cuisine,
+      imageUrl: this.form.imageUrl || this.form.image,
+      deliveryFee: this.form.deliveryFee,
+      minOrder: this.form.minOrder,
+      deliveryTimeRange: this.form.deliveryTime || this.form.deliveryTimeRange || '25-35',
+      categories: this.form.categories || [],
+      promoted: this.form.promoted ?? false,
+      active: this.form.active ?? true,
+      ownerId: this.form.ownerId || undefined,
+      address: this.form.address,
+      city: this.form.city,
+      phone: this.form.phone,
+    };
     if (this.editing) {
-      this.restaurantService.update(this.editing.id, payload).subscribe(updated => {
-        this.restaurants.update(list => list.map(r => r.id === updated.id ? updated : r));
-        this.showModal = false;
+      this.restaurantService.update(this.editing.id, payload).subscribe({
+        next: updated => {
+          this.restaurants.update(list => list.map(r =>
+            r.id === updated.id
+              ? { ...updated, image: updated.imageUrl || updated.image || '', deliveryTime: updated.deliveryTimeRange || updated.deliveryTime || '25-35' }
+              : r
+          ));
+          this.showModal = false;
+        },
+        error: err => console.error('Update failed', err)
       });
     } else {
-      this.restaurantService.create(payload).subscribe(created => {
-        this.restaurants.update(list => [...list, created]);
-        this.showModal = false;
+      this.restaurantService.create(payload).subscribe({
+        next: created => {
+          const normalized: Restaurant = {
+            ...created,
+            image: created.imageUrl || created.image || '',
+            deliveryTime: created.deliveryTimeRange || created.deliveryTime || '25-35',
+          };
+          this.restaurants.update(list => [...list, normalized]);
+          this.showModal = false;
+        },
+        error: err => console.error('Create failed', err)
       });
     }
   }
@@ -197,7 +261,13 @@ export class AdminRestaurantsComponent implements OnInit {
 
   private emptyForm(): Partial<Restaurant> {
     return { name: '', cuisine: '', description: '', deliveryFee: 2.5, minOrder: 15,
-             deliveryTime: '25-35', deliveryTimeRange: '25-35', image: '', promoted: false, active: true, categories: [],
-             ownerId: this.auth.currentUser()?.userId || 'admin-001' };
+             deliveryTime: '25-35', deliveryTimeRange: '25-35', imageUrl: '', image: '',
+             promoted: false, active: true, categories: [], ownerId: '' };
+  }
+
+  ownerName(ownerId: string | undefined): string {
+    if (!ownerId) return '';
+    const u = this.restaurateurs().find(r => r.id === ownerId);
+    return u ? `${u.firstName} ${u.lastName}` : '';
   }
 }

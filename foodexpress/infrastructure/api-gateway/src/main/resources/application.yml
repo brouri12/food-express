@@ -36,7 +36,7 @@ spring:
         - id: user-service
           uri: lb://user-service
           predicates:
-            - Path=/api/auth/**, /api/users/**
+            - Path=/api/auth/**, /api/users, /api/users/**
           filters:
             - StripPrefix=0
 
@@ -64,7 +64,21 @@ spring:
         - id: delivery-service
           uri: lb://delivery-service
           predicates:
-            - Path=/api/delivery/**
+            - Path=/api/delivery, /api/delivery/**
+          filters:
+            - StripPrefix=0
+
+        - id: rating-service
+          uri: lb://rating-service
+          predicates:
+            - Path=/api/ratings/**
+          filters:
+            - StripPrefix=0
+
+        - id: order-service
+          uri: lb://order-service
+          predicates:
+            - Path=/api/orders/**
           filters:
             - StripPrefix=0
 
@@ -104,6 +118,13 @@ spring:
           filters:
             - RewritePath=/delivery-service/v3/api-docs, /v3/api-docs
 
+        - id: rating-service-docs
+          uri: lb://rating-service
+          predicates:
+            - Path=/rating-service/v3/api-docs
+          filters:
+            - RewritePath=/rating-service/v3/api-docs, /v3/api-docs
+
   security:
     oauth2:
       resourceserver:
@@ -139,3 +160,7 @@ springdoc:
         url: /promotion-service/v3/api-docs
       - name: delivery-service
         url: /delivery-service/v3/api-docs
+      - name: rating-service
+        url: /rating-service/v3/api-docs
+      - name: order-service
+        url: /order-service/v3/api-docs

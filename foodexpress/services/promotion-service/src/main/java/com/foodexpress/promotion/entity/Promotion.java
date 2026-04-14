@@ -65,6 +65,23 @@ public class Promotion {
     @Builder.Default
     private Integer usageCount = 0;
 
+    // ── Plafond par utilisateur ───────────────────────────────
+    @Builder.Default
+    private Integer maxUsagePerUser = 1; // max utilisations par utilisateur (null = illimité)
+
+    // ── Promo Flash ───────────────────────────────────────────
+    // Si non null → promo flash avec heure de fin précise
+    private LocalDateTime flashEndTime;
+
+    // ── Ciblage ───────────────────────────────────────────────
+    // "NEW_USER" | "INACTIVE_30" | "ALL" (null = ALL)
+    private String targetSegment;
+
+    // ── Parrainage ────────────────────────────────────────────
+    @Builder.Default
+    private boolean referralPromo = false; // true = code de parrainage
+    private String referrerId; // userId du parrain
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

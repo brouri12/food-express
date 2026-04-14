@@ -2,8 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DeliveryService } from '../../../services/delivery.service';
-import { Delivery, DeliveryStatus } from '../../../models/delivery.model';
-import { mockDelivery } from '../../../data/mock.data';
+import { DeliveryStatus } from '../../../models/delivery.model';
 
 @Component({
   selector: 'app-admin-deliveries',
@@ -14,10 +13,13 @@ import { mockDelivery } from '../../../data/mock.data';
       <div class="flex items-center justify-between">
         <div>
           <h2 class="text-2xl font-bold text-gray-900">🛵 Gestion des Livraisons</h2>
-          <p class="text-gray-500 text-sm mt-1">API: delivery-service → GET/PUT /api/delivery</p>
+          <p class="text-gray-500 text-sm mt-1">API: delivery-service → GET /api/delivery</p>
         </div>
         <div class="flex items-center gap-2">
           <span class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">RabbitMQ: order.created</span>
+          <button (click)="load()" class="px-3 py-1 text-sm bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors">
+            🔄 Actualiser
+          </button>
         </div>
       </div>
 
@@ -30,8 +32,14 @@ import { mockDelivery } from '../../../data/mock.data';
         </button>
       </div>
 
+      <!-- Loading -->
+      <div *ngIf="loading()" class="bg-white rounded-xl shadow-sm p-8 text-center text-gray-500">
+        <div class="animate-spin text-3xl mb-2">⏳</div>
+        Chargement des livraisons...
+      </div>
+
       <!-- Deliveries Table -->
-      <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div *ngIf="!loading()" class="bg-white rounded-xl shadow-sm overflow-hidden">
         <table class="w-full">
           <thead class="bg-gray-50 border-b border-gray-200">
             <tr>
@@ -64,6 +72,7 @@ import { mockDelivery } from '../../../data/mock.data';
               </td>
               <td class="px-6 py-4">
                 <select (change)="updateStatus(d.orderId, $any($event.target).value)"
+                        [value]="''"
                         class="text-xs px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500">
                   <option value="">Changer statut</option>
                   <option value="ASSIGNED">Assigné</option>
@@ -77,6 +86,7 @@ import { mockDelivery } from '../../../data/mock.data';
           </tbody>
         </table>
         <div *ngIf="filtered().length === 0" class="p-8 text-center text-gray-500">
+          <p class="text-2xl mb-2">📭</p>
           Aucune livraison trouvée
         </div>
       </div>
@@ -86,6 +96,7 @@ import { mockDelivery } from '../../../data/mock.data';
 export class AdminDeliveriesComponent implements OnInit {
   deliveries = signal<any[]>([]);
   filtered = signal<any[]>([]);
+  loading = signal(true);
   filterStatus = '';
 
   statuses = [
@@ -100,20 +111,16 @@ export class AdminDeliveriesComponent implements OnInit {
   constructor(private deliveryService: DeliveryService) {}
 
   ngOnInit(): void {
-    // Mock data since we don't have a list endpoint
-    const mockList = [
-      { orderId: 'order-1', driverName: 'Thomas Dubois', driverPhone: '+33 6 98 76 54 32',
-        deliveryAddress: '15 Rue de la Paix, 75002 Paris', deliveryFee: 2.50,
-        estimatedMinutes: 30, status: 'DELIVERED', createdAt: new Date().toISOString() },
-      { orderId: 'order-2', driverName: 'Marie Leroy', driverPhone: '+33 6 12 34 56 78',
-        deliveryAddress: '42 Avenue des Champs, 75008 Paris', deliveryFee: 3.00,
-        estimatedMinutes: 15, status: 'ON_THE_WAY', createdAt: new Date().toISOString() },
-      { orderId: 'order-3', driverName: null, driverPhone: null,
-        deliveryAddress: '8 Rue du Commerce, 75015 Paris', deliveryFee: 1.99,
-        estimatedMinutes: 35, status: 'PENDING', createdAt: new Date().toISOString() },
-    ];
-    this.deliveries.set(mockList);
-    this.filtered.set(mockList);
+    this.load();
+  }
+
+  load(): void {
+    this.loading.set(true);
+    this.deliveryService.getAll().subscribe(data => {
+      this.deliveries.set(data);
+      this.applyFilter();
+      this.loading.set(false);
+    });
   }
 
   applyFilter(): void {
@@ -123,9 +130,12 @@ export class AdminDeliveriesComponent implements OnInit {
 
   updateStatus(orderId: string, status: string): void {
     if (!status) return;
-    this.deliveryService.updateStatus(orderId, status as DeliveryStatus).subscribe(() => {
-      this.deliveries.update(list => list.map(d => d.orderId === orderId ? { ...d, status } : d));
-      this.applyFilter();
+    this.deliveryService.updateStatus(orderId, status as DeliveryStatus).subscribe({
+      next: () => {
+        this.deliveries.update(list => list.map(d => d.orderId === orderId ? { ...d, status } : d));
+        this.applyFilter();
+      },
+      error: (err) => console.error('Erreur mise à jour statut:', err)
     });
   }
 

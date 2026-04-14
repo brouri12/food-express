@@ -1,0 +1,56 @@
+server:
+  port: 8087
+
+spring:
+  application:
+    name: order-service
+  config:
+    import: optional:configserver:http://config-server:8888
+
+  datasource:
+    url: jdbc:postgresql://fe-postgres:5432/orderdb
+    username: foodexpress
+    password: foodexpress123
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  rabbitmq:
+    host: fe-rabbitmq
+    port: 5672
+    username: guest
+    password: guest
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://fe-eureka:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html

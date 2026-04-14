@@ -1,11 +1,12 @@
 import { Component, Input, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Promotion } from '../../models/promotion.model';
+import { SafeImgPipe } from '../safe-img.pipe';
 
 @Component({
   selector: 'app-promo-carousel',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, SafeImgPipe],
   template: `
     <section class="mb-12">
       <div class="flex items-center justify-between mb-6">
@@ -17,7 +18,9 @@ import { Promotion } from '../../models/promotion.model';
 
       <div class="relative overflow-hidden rounded-2xl shadow-xl group" *ngIf="promotions.length">
         <div class="relative h-64 md:h-80 transition-all duration-500">
-          <img [src]="current.image" [alt]="current.title"
+          <img [src]="(current.imageUrl || current.image) | safeImg:'promo'"
+               [alt]="current.title"
+               (error)="$any($event.target).src='https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=800&h=400&fit=crop'"
                class="w-full h-full object-cover transition-opacity duration-500" />
           <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
           <div class="absolute bottom-0 left-0 right-0 p-6 md:p-8 text-white">

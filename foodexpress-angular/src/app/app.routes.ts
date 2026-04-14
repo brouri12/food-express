@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { LayoutComponent } from './layout/layout.component';
-import { authGuard, adminGuard } from './guards/auth.guard';
+import { authGuard, adminGuard, driverGuard, restaurateurGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
   {
@@ -11,7 +11,10 @@ export const routes: Routes = [
       { path: 'restaurants', loadComponent: () => import('./pages/restaurants/restaurants.component').then(m => m.RestaurantsComponent) },
       { path: 'restaurant/:id', loadComponent: () => import('./pages/restaurant-menu/restaurant-menu.component').then(m => m.RestaurantMenuComponent) },
       { path: 'cart', loadComponent: () => import('./pages/cart/cart.component').then(m => m.CartComponent) },
+      { path: 'orders', loadComponent: () => import('./pages/orders/orders.component').then(m => m.OrdersComponent) },
       { path: 'delivery/:orderId', loadComponent: () => import('./pages/delivery-tracking/delivery-tracking.component').then(m => m.DeliveryTrackingComponent) },
+      { path: 'driver', loadComponent: () => import('./pages/driver/driver-dashboard.component').then(m => m.DriverDashboardComponent), canActivate: [driverGuard] },
+      { path: 'restaurant-dashboard', loadComponent: () => import('./pages/restaurant-dashboard/restaurant-dashboard.component').then(m => m.RestaurantDashboardComponent), canActivate: [restaurateurGuard] },
       { path: 'login', loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent) },
       { path: 'signup', loadComponent: () => import('./pages/signup/signup.component').then(m => m.SignupComponent) },
     ]
@@ -27,6 +30,8 @@ export const routes: Routes = [
       { path: 'promotions', loadComponent: () => import('./pages/admin/admin-promotions/admin-promotions.component').then(m => m.AdminPromotionsComponent) },
       { path: 'deliveries', loadComponent: () => import('./pages/admin/admin-deliveries/admin-deliveries.component').then(m => m.AdminDeliveriesComponent) },
       { path: 'users', loadComponent: () => import('./pages/admin/admin-users/admin-users.component').then(m => m.AdminUsersComponent) },
+      { path: 'ratings', loadComponent: () => import('./pages/admin/admin-ratings/admin-ratings.component').then(m => m.AdminRatingsComponent) },
+      { path: 'orders', loadComponent: () => import('./pages/admin/admin-orders/admin-orders.component').then(m => m.AdminOrdersComponent) },
     ]
   },
   { path: '**', redirectTo: '' }

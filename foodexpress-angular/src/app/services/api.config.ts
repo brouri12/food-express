@@ -31,6 +31,9 @@ export const API = {
   PROMOTIONS_MANAGE:    `${API_BASE}/api/promotions`,
 
   // Delivery Service
+  DELIVERY_ALL:         `${API_BASE}/api/delivery`,
+  DELIVERY_PENDING:     `${API_BASE}/api/delivery/pending`,
+  DELIVERY_MY:          `${API_BASE}/api/delivery/my`,
   DELIVERY_BY_ORDER:    (orderId: string) => `${API_BASE}/api/delivery/order/${orderId}`,
   DELIVERY_CALCULATE:   `${API_BASE}/api/delivery/calculate`,
   DELIVERY_STATUS:      (orderId: string) => `${API_BASE}/api/delivery/manage/${orderId}/status`,

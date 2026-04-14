@@ -32,6 +32,8 @@ export interface CartItem {
   restaurantName: string;
   name: string;
   price: number;
+  originalPrice?: number;   // prix avant happy hour
+  happyHour?: boolean;
   image: string;
   quantity: number;
 }

@@ -5,11 +5,12 @@ import { MenuService } from '../../../services/menu.service';
 import { RestaurantService } from '../../../services/restaurant.service';
 import { MenuItem } from '../../../models/menu.model';
 import { Restaurant } from '../../../models/restaurant.model';
+import { SafeImgPipe } from '../../../shared/safe-img.pipe';
 
 @Component({
   selector: 'app-admin-menus',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SafeImgPipe],
   template: `
     <div class="space-y-6 fade-in">
       <div class="flex items-center justify-between">
@@ -50,7 +51,7 @@ import { Restaurant } from '../../../models/restaurant.model';
             <tr *ngFor="let item of allItems()" class="hover:bg-gray-50 transition-colors">
               <td class="px-6 py-4">
                 <div class="flex items-center gap-3">
-                  <img [src]="item.image || item.imageUrl" [alt]="item.name" class="w-12 h-12 rounded-lg object-cover" />
+                  <img [src]="(item.imageUrl || item.image) | safeImg:'menu'" [alt]="item.name" class="w-12 h-12 rounded-lg object-cover" />
                   <div>
                     <p class="font-semibold text-gray-900">{{ item.name }}</p>
                     <p class="text-xs text-gray-500 line-clamp-1">{{ item.description }}</p>
@@ -122,7 +123,11 @@ import { Restaurant } from '../../../models/restaurant.model';
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-1">URL Image</label>
             <input type="url" [(ngModel)]="form.imageUrl" name="imageUrl"
+                   placeholder="https://images.unsplash.com/..."
                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" />
+            <div *ngIf="form.imageUrl" class="mt-2 h-20 rounded-lg overflow-hidden border border-gray-200">
+              <img [src]="form.imageUrl | safeImg:'menu'" class="w-full h-full object-cover" alt="preview" />
+            </div>
           </div>
           <div class="flex items-center gap-4">
             <label class="flex items-center gap-2 cursor-pointer">

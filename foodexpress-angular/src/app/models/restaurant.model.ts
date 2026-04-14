@@ -9,7 +9,7 @@ export interface Restaurant {
   deliveryTimeRange?: string;
   deliveryFee: number;
   minOrder: number;
-  image: string;
+  image?: string;
   imageUrl?: string;
   promoted: boolean;
   discount?: number;
@@ -21,6 +21,8 @@ export interface Restaurant {
   address?: string;
   city?: string;
   phone?: string;
+  badges?: string[];
+  deliveryRadiusKm?: number;
 }
 
 export interface Category {

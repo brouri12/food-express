@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PromotionService } from '../../../services/promotion.service';
 import { Promotion } from '../../../models/promotion.model';
+import { SafeImgPipe } from '../../../shared/safe-img.pipe';
 
 @Component({
   selector: 'app-admin-promotions',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SafeImgPipe],
   template: `
     <div class="space-y-6 fade-in">
       <div class="flex items-center justify-between">
@@ -26,7 +27,21 @@ import { Promotion } from '../../../models/promotion.model';
         <div *ngFor="let p of promotions()"
              class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200 hover:border-orange-300 transition-colors">
           <div class="relative h-32">
-            <img [src]="p.image" [alt]="p.title" class="w-full h-full object-cover" />
+            <img [src]="(p.imageUrl || p.image) | safeImg:'promo'" [alt]="p.title" class="w-full h-full object-cover" />
+            <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+            <div class="absolute bottom-2 left-3">
+              <span *ngIf="p.code" class="bg-white text-gray-900 px-2 py-1 rounded text-xs font-bold font-mono">
+                {{ p.code }}
+              </span>
+            </div>
+            <!-- Flash badge -->
+            <div *ngIf="p.flashEndTime" class="absolute top-2 left-2 bg-red-600 text-white px-2 py-0.5 rounded-full text-xs font-bold animate-pulse">
+              ⚡ FLASH
+            </div>
+            <!-- Referral badge -->
+            <div *ngIf="p.referralPromo" class="absolute top-2 left-2 bg-purple-600 text-white px-2 py-0.5 rounded-full text-xs font-bold">
+              🎁 Parrainage
+            </div>
             <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
             <div class="absolute bottom-2 left-3">
               <span *ngIf="p.code" class="bg-white text-gray-900 px-2 py-1 rounded text-xs font-bold font-mono">
@@ -122,7 +137,25 @@ import { Promotion } from '../../../models/promotion.model';
           </div>
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-1">URL Image</label>
-            <input type="url" [(ngModel)]="form.image" name="image"
+            <input type="url" [(ngModel)]="form.imageUrl" name="imageUrl"
+                   placeholder="https://images.unsplash.com/..."
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" />
+            <!-- Live preview -->
+            <div *ngIf="form.imageUrl" class="mt-2 h-24 rounded-lg overflow-hidden border border-gray-200">
+              <img [src]="form.imageUrl | safeImg:'promo'" class="w-full h-full object-cover" alt="preview" />
+            </div>
+          </div>
+          <!-- Flash promo -->
+          <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+            <label class="block text-sm font-semibold text-red-800 mb-1">⚡ Promo Flash (optionnel)</label>
+            <input type="datetime-local" [(ngModel)]="form.flashEndTime" name="flashEndTime"
+                   class="w-full px-3 py-2 border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400 text-sm" />
+            <p class="text-xs text-red-600 mt-1">Laissez vide pour une promo normale</p>
+          </div>
+          <!-- Max usage per user -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Max utilisations par client</label>
+            <input type="number" [(ngModel)]="form.maxUsagePerUser" name="maxUsagePerUser" min="1"
                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" />
           </div>
           <div class="flex gap-3 pt-2">
@@ -176,6 +209,7 @@ export class AdminPromotionsComponent implements OnInit {
 
   private emptyForm() {
     return { title: '', description: '', code: '', type: 'PERCENTAGE', discountPercent: 0,
-             minOrderAmount: 0, validFrom: '', validUntil: '', image: '', active: true };
+             minOrderAmount: 0, validFrom: '', validUntil: '', imageUrl: '', active: true,
+             flashEndTime: null, maxUsagePerUser: 1, targetSegment: 'ALL' };
   }
 }

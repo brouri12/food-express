@@ -119,6 +119,16 @@ import { PromotionService } from '../../../services/promotion.service';
             <span class="text-3xl">🛵</span>
             <span class="text-sm font-semibold text-purple-700">Voir livraisons</span>
           </a>
+          <a routerLink="/admin/ratings"
+             class="flex flex-col items-center gap-2 p-4 bg-yellow-50 hover:bg-yellow-100 rounded-xl transition-colors cursor-pointer">
+            <span class="text-3xl">⭐</span>
+            <span class="text-sm font-semibold text-yellow-700">Gérer les avis</span>
+          </a>
+          <a routerLink="/admin/orders"
+             class="flex flex-col items-center gap-2 p-4 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors cursor-pointer">
+            <span class="text-3xl">📦</span>
+            <span class="text-sm font-semibold text-indigo-700">Voir commandes</span>
+          </a>
         </div>
       </div>
     </div>
@@ -144,6 +154,8 @@ export class AdminDashboardComponent implements OnInit {
     { name: 'Menu Service', port: 8083, icon: '🍽️', status: 'UP' },
     { name: 'Promotion Service', port: 8084, icon: '🏷️', status: 'UP' },
     { name: 'Delivery Service', port: 8085, icon: '🛵', status: 'UP' },
+    { name: 'Rating Service', port: 8086, icon: '⭐', status: 'UP' },
+    { name: 'Order Service', port: 8087, icon: '📦', status: 'UP' },
     { name: 'RabbitMQ', port: 15672, icon: '🐰', status: 'UP' },
   ];
 

@@ -60,6 +60,12 @@ public class Delivery {
     private LocalDateTime pickedUpAt;
     private LocalDateTime deliveredAt;
 
+    // ── Notation livreur ──────────────────────────────────────
+    // Note donnée par le client après livraison (1-5)
+    private Integer driverRating;
+    private String  driverRatingComment;
+    private LocalDateTime ratedAt;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

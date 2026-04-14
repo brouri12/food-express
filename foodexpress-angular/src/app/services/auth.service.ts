@@ -45,6 +45,18 @@ export class AuthService {
     return this.currentUser()?.role === 'ADMIN';
   }
 
+  isDriver(): boolean {
+    return this.currentUser()?.role === 'LIVREUR';
+  }
+
+  isRestaurateur(): boolean {
+    return this.currentUser()?.role === 'RESTAURATEUR';
+  }
+
+  getUserId(): string {
+    return this.currentUser()?.userId || '';
+  }
+
   private saveSession(res: AuthResponse): void {
     localStorage.setItem(this.TOKEN_KEY, res.token);
     localStorage.setItem(this.USER_KEY, JSON.stringify(res));
