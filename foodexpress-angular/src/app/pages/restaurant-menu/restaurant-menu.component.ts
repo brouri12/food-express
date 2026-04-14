@@ -67,6 +67,10 @@ import { MenuItem } from '../../models/menu.model';
                     [class]="'px-4 py-2 rounded-full font-semibold whitespace-nowrap transition-all ' + (selectedCat === cat ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white' : 'bg-gray-100 text-gray-700')">
               {{ cat }}
             </button>
+            <button type="button" (click)="expandAllCategories()"
+                    class="px-3 py-2 rounded-full font-semibold whitespace-nowrap transition-all bg-gray-100 text-gray-700 hover:bg-gray-200">
+              Tout déplier
+            </button>
           </div>
           <div class="pb-4 grid grid-cols-1 md:grid-cols-3 gap-3">
             <div class="relative">
@@ -432,6 +436,10 @@ export class RestaurantMenuComponent implements OnInit {
       ...current,
       [category]: !current[category]
     });
+  }
+
+  expandAllCategories(): void {
+    this.collapsedCategories.set({});
   }
 
   getDraftQty(itemId: string): number {
