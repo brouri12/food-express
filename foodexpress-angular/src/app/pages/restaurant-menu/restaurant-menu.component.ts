@@ -69,13 +69,19 @@ import { MenuItem } from '../../models/menu.model';
             </button>
           </div>
           <div class="pb-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-            <input type="text"
-                   [(ngModel)]="searchQuery"
-                   (ngModelChange)="onFiltersChange()"
-                   (keydown)="onSearchKeyDown($event)"
-                   placeholder="Rechercher un plat..."
-                   aria-label="Rechercher un plat du menu"
-                   class="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" />
+            <div class="relative">
+              <input type="text"
+                     [(ngModel)]="searchQuery"
+                     (ngModelChange)="onFiltersChange()"
+                     (keydown)="onSearchKeyDown($event)"
+                     placeholder="Rechercher un plat..."
+                     aria-label="Rechercher un plat du menu"
+                     class="w-full pl-4 pr-10 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" />
+              <button *ngIf="searchQuery.trim()" type="button" (click)="clearSearch()"
+                      class="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full text-gray-500 hover:bg-gray-100">
+                ✕
+              </button>
+            </div>
             <select [(ngModel)]="sortBy"
                     (ngModelChange)="onFiltersChange()"
                     aria-label="Trier les plats"
@@ -353,9 +359,13 @@ export class RestaurantMenuComponent implements OnInit {
 
   onSearchKeyDown(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
-      this.searchQuery = '';
-      this.page = 1;
+      this.clearSearch();
     }
+  }
+
+  clearSearch(): void {
+    this.searchQuery = '';
+    this.onFiltersChange();
   }
 
   resetFilters(): void {
