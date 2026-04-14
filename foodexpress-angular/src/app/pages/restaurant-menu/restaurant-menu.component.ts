@@ -58,12 +58,12 @@ import { MenuItem } from '../../models/menu.model';
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div class="flex items-center gap-2 overflow-x-auto py-4 scrollbar-hide">
             <span class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full whitespace-nowrap">API: Menu Service</span>
-            <button (click)="selectedCat = null"
+            <button (click)="selectCategory(null)"
                     [class]="'px-4 py-2 rounded-full font-semibold whitespace-nowrap transition-all ' + (!selectedCat ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white' : 'bg-gray-100 text-gray-700')">
               Tout le menu
             </button>
             <button *ngFor="let cat of menuCategories()"
-                    (click)="selectedCat = cat"
+                    (click)="selectCategory(cat)"
                     [class]="'px-4 py-2 rounded-full font-semibold whitespace-nowrap transition-all ' + (selectedCat === cat ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white' : 'bg-gray-100 text-gray-700')">
               {{ cat }}
             </button>
@@ -136,7 +136,7 @@ import { MenuItem } from '../../models/menu.model';
                 Réinitialiser les filtres
               </button>
             </div>
-            <ng-container *ngFor="let entry of displayedMenu()">
+            <ng-container *ngFor="let entry of pagedDisplayedMenu()">
               <div>
                 <button type="button" (click)="toggleCategory(entry.category)"
                         class="w-full text-left flex items-center justify-between mb-4">
@@ -183,6 +183,17 @@ import { MenuItem } from '../../models/menu.model';
                 </div>
               </div>
             </ng-container>
+            <div *ngIf="totalPages() > 1" class="flex items-center justify-center gap-3 pt-2">
+              <button type="button" (click)="goToPreviousPage()" [disabled]="page <= 1"
+                      class="px-3 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-gray-700 disabled:opacity-40">
+                Précédent
+              </button>
+              <span class="text-sm text-gray-600">Page {{ page }} / {{ totalPages() }}</span>
+              <button type="button" (click)="goToNextPage()" [disabled]="page >= totalPages()"
+                      class="px-3 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-gray-700 disabled:opacity-40">
+                Suivant
+              </button>
+            </div>
           </div>
 
           <!-- Sidebar -->
@@ -244,6 +255,8 @@ export class RestaurantMenuComponent implements OnInit {
   sortBy: 'default' | 'nameAsc' | 'priceAsc' | 'priceDesc' = 'default';
   collapsedCategories = signal<Record<string, boolean>>({});
   draftQty = signal<Record<string, number>>({});
+  page = 1;
+  readonly categoriesPerPage = 2;
   showToast = false;
   cartCount = this.cart.count;
 
@@ -263,6 +276,11 @@ export class RestaurantMenuComponent implements OnInit {
     this.onlyPopular ||
     this.maxPrice < 80;
   isCategoryCollapsed = (category: string) => !!this.collapsedCategories()[category];
+  totalPages = () => Math.max(1, Math.ceil(this.displayedMenu().length / this.categoriesPerPage));
+  pagedDisplayedMenu = () => {
+    const start = (this.page - 1) * this.categoriesPerPage;
+    return this.displayedMenu().slice(start, start + this.categoriesPerPage);
+  };
 
   displayedMenu = () => {
     const data = this.menuData();
@@ -322,6 +340,20 @@ export class RestaurantMenuComponent implements OnInit {
     this.maxPrice = 80;
     this.sortBy = 'default';
     this.selectedCat = null;
+    this.page = 1;
+  }
+
+  selectCategory(category: string | null): void {
+    this.selectedCat = category;
+    this.page = 1;
+  }
+
+  goToPreviousPage(): void {
+    this.page = Math.max(1, this.page - 1);
+  }
+
+  goToNextPage(): void {
+    this.page = Math.min(this.totalPages(), this.page + 1);
   }
 
   toggleCategory(category: string): void {
