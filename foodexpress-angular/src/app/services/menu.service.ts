@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, of, catchError } from 'rxjs';
+import { Observable, of, catchError, map } from 'rxjs';
 import { API } from './api.config';
 import { MenuItem } from '../models/menu.model';
 import { mockMenus } from '../data/mock.data';
@@ -11,18 +11,21 @@ export class MenuService {
 
   getByRestaurant(restaurantId: string): Observable<Record<string, MenuItem[]>> {
     return this.http.get<Record<string, MenuItem[]>>(API.MENUS_BY_RESTAURANT(restaurantId)).pipe(
+      // Normalise les champs texte pour éviter les erreurs d'affichage/filtre.
+      map(grouped => this.normalizeGroupedMenu(grouped)),
       catchError(() => {
         const mock = mockMenus[restaurantId];
         if (!mock) return of({});
         const grouped: Record<string, MenuItem[]> = {};
         mock.categories.forEach((cat: any) => { grouped[cat.name] = cat.items; });
-        return of(grouped);
+        return of(this.normalizeGroupedMenu(grouped));
       })
     );
   }
 
   getPopular(restaurantId: string): Observable<MenuItem[]> {
     return this.http.get<MenuItem[]>(API.MENUS_POPULAR(restaurantId)).pipe(
+      map(items => items.map(item => this.normalizeItem(item))),
       catchError(() => of([]))
     );
   }
@@ -30,6 +33,7 @@ export class MenuService {
   search(query: string): Observable<MenuItem[]> {
     const params = new HttpParams().set('q', query);
     return this.http.get<MenuItem[]>(API.MENUS_SEARCH, { params }).pipe(
+      map(items => items.map(item => this.normalizeItem(item))),
       catchError(() => of([]))
     );
   }
@@ -44,5 +48,23 @@ export class MenuService {
 
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${API.MENUS_MANAGE}/${id}`);
+  }
+
+  private normalizeGroupedMenu(grouped: Record<string, MenuItem[]>): Record<string, MenuItem[]> {
+    const normalized: Record<string, MenuItem[]> = {};
+    Object.entries(grouped || {}).forEach(([category, items]) => {
+      normalized[category] = (items || []).map(item => this.normalizeItem(item));
+    });
+    return normalized;
+  }
+
+  private normalizeItem(item: MenuItem): MenuItem {
+    return {
+      ...item,
+      name: item.name || 'Plat',
+      description: item.description || '',
+      category: item.category || 'Autres',
+      available: item.available !== false
+    };
   }
 }
