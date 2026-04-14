@@ -102,6 +102,19 @@ import { MenuItem } from '../../models/menu.model';
               </button>
             </div>
           </div>
+          <div class="pb-4 flex flex-wrap items-center gap-2" *ngIf="hasActiveFilters()">
+            <span class="text-xs text-gray-500">Filtres actifs :</span>
+            <span *ngIf="selectedCat" class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">Catégorie: {{ selectedCat }}</span>
+            <span *ngIf="searchQuery.trim()" class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">Recherche: "{{ searchQuery }}"</span>
+            <span *ngIf="onlyAvailable" class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">Disponibles</span>
+            <span *ngIf="onlyVegetarian" class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">Végétarien</span>
+            <span *ngIf="onlyPopular" class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">Populaire</span>
+            <span *ngIf="maxPrice < 80" class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">Prix ≤ {{ maxPrice }}€</span>
+            <button type="button" (click)="resetFilters()"
+                    class="ml-1 px-2 py-1 rounded-full text-xs font-semibold text-red-600 border border-red-200 hover:bg-red-50">
+              Tout effacer
+            </button>
+          </div>
         </div>
       </div>
 
@@ -110,6 +123,7 @@ import { MenuItem } from '../../models/menu.model';
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <!-- Items -->
           <div class="lg:col-span-2 space-y-8">
+            <p class="text-sm text-gray-500">Résultats : {{ visibleItemsCount() }} plat(s)</p>
             <div *ngIf="displayedMenu().length === 0"
                  class="bg-white rounded-xl border border-dashed border-gray-300 p-8 text-center">
               <p class="text-lg font-semibold text-gray-800 mb-2">Aucun plat trouvé</p>
@@ -224,6 +238,13 @@ export class RestaurantMenuComponent implements OnInit {
     const total = items.reduce((acc, item) => acc + item.price, 0);
     return total / items.length;
   };
+  hasActiveFilters = () =>
+    !!this.selectedCat ||
+    !!this.searchQuery.trim() ||
+    this.onlyAvailable ||
+    this.onlyVegetarian ||
+    this.onlyPopular ||
+    this.maxPrice < 80;
 
   displayedMenu = () => {
     const data = this.menuData();
