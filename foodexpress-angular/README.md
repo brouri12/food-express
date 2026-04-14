@@ -37,7 +37,7 @@ src/app/
 ├── pages/
 │   ├── home/                # Hero + Carousel + Catégories + Restaurants
 │   ├── restaurants/         # Liste + Filtres + Recherche
-│   ├── restaurant-menu/     # Menu groupé par catégorie + Panier
+│   ├── restaurant-menu/     # Menu groupé + filtres avancés + pagination + panier
 │   ├── cart/                # Panier + Code promo (API promotion-service)
 │   ├── login/               # Auth JWT (API user-service)
 │   ├── signup/              # Inscription CLIENT/RESTAURATEUR/LIVREUR
@@ -81,3 +81,11 @@ Compte démo (fonctionne sans backend) :
 
 Tous les services ont un `catchError(() => of(mockData))`.
 L'app fonctionne entièrement sans backend grâce aux données mock.
+
+## Menu UI (améliorations récentes)
+
+- Recherche rapide + touche `Esc` pour effacer
+- Filtres: disponibilité, végétarien, populaire, prix max + raccourcis prix
+- Pagination par blocs de catégories
+- Quantité par plat avant ajout panier + toast contextuel
+- Cache menu côté service avec TTL et purge manuelle
