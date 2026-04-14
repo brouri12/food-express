@@ -49,15 +49,25 @@ export class MenuService {
   }
 
   create(item: Partial<MenuItem>): Observable<MenuItem> {
-    return this.http.post<MenuItem>(API.MENUS_MANAGE, item);
+    return this.http.post<MenuItem>(API.MENUS_MANAGE, item).pipe(
+      tap(() => this.clearCacheForRestaurant(item.restaurantId))
+    );
   }
 
   update(id: string, item: Partial<MenuItem>): Observable<MenuItem> {
-    return this.http.put<MenuItem>(`${API.MENUS_MANAGE}/${id}`, item);
+    return this.http.put<MenuItem>(`${API.MENUS_MANAGE}/${id}`, item).pipe(
+      tap(() => this.clearCacheForRestaurant(item.restaurantId))
+    );
   }
 
   delete(id: string): Observable<void> {
-    return this.http.delete<void>(`${API.MENUS_MANAGE}/${id}`);
+    return this.http.delete<void>(`${API.MENUS_MANAGE}/${id}`).pipe(
+      tap(() => this.menuCache.clear())
+    );
+  }
+
+  clearMenuCache(): void {
+    this.menuCache.clear();
   }
 
   private normalizeGroupedMenu(grouped: Record<string, MenuItem[]>): Record<string, MenuItem[]> {
@@ -66,6 +76,14 @@ export class MenuService {
       normalized[category] = (items || []).map(item => this.normalizeItem(item));
     });
     return normalized;
+  }
+
+  private clearCacheForRestaurant(restaurantId?: string): void {
+    if (!restaurantId) {
+      this.menuCache.clear();
+      return;
+    }
+    this.menuCache.delete(restaurantId);
   }
 
   private normalizeItem(item: MenuItem): MenuItem {
