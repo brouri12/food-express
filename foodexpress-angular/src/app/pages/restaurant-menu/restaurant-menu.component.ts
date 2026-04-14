@@ -156,10 +156,17 @@ import { MenuItem } from '../../models/menu.model';
                         <p class="text-gray-600 text-sm mb-3 line-clamp-2">{{ item.description }}</p>
                         <div class="flex items-center justify-between">
                           <span class="font-bold text-lg text-gray-900">{{ item.price | number:'1.2-2' }}€</span>
-                          <button *ngIf="item.available" (click)="addToCart(item)"
-                                  class="bg-gradient-to-r from-orange-500 to-red-500 text-white p-2 rounded-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-md">
-                            +
-                          </button>
+                          <div *ngIf="item.available" class="flex items-center gap-2">
+                            <button type="button" (click)="changeDraftQty(item.id, -1)"
+                                    class="w-8 h-8 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">-</button>
+                            <span class="w-6 text-center text-sm font-semibold">{{ getDraftQty(item.id) }}</span>
+                            <button type="button" (click)="changeDraftQty(item.id, 1)"
+                                    class="w-8 h-8 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">+</button>
+                            <button (click)="addToCart(item)"
+                                    class="bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-2 rounded-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-md text-sm font-semibold">
+                              Ajouter
+                            </button>
+                          </div>
                           <span *ngIf="!item.available" class="text-gray-400 text-sm">Indisponible</span>
                         </div>
                       </div>
@@ -232,6 +239,7 @@ export class RestaurantMenuComponent implements OnInit {
   maxPrice = 80;
   sortBy: 'default' | 'nameAsc' | 'priceAsc' | 'priceDesc' = 'default';
   collapsedCategories = signal<Record<string, boolean>>({});
+  draftQty = signal<Record<string, number>>({});
   showToast = false;
   cartCount = this.cart.count;
 
@@ -320,16 +328,29 @@ export class RestaurantMenuComponent implements OnInit {
     });
   }
 
+  getDraftQty(itemId: string): number {
+    return this.draftQty()[itemId] || 1;
+  }
+
+  changeDraftQty(itemId: string, delta: number): void {
+    const current = this.getDraftQty(itemId);
+    const next = Math.max(1, current + delta);
+    this.draftQty.set({ ...this.draftQty(), [itemId]: next });
+  }
+
   addToCart(item: MenuItem): void {
     const r = this.restaurant()!;
-    this.cart.add({
-      id: item.id,
-      restaurantId: r.id,
-      restaurantName: r.name,
-      name: item.name,
-      price: item.price,
-      image: item.image || item.imageUrl || '',
-    });
+    const qty = this.getDraftQty(item.id);
+    for (let i = 0; i < qty; i++) {
+      this.cart.add({
+        id: item.id,
+        restaurantId: r.id,
+        restaurantName: r.name,
+        name: item.name,
+        price: item.price,
+        image: item.image || item.imageUrl || '',
+      });
+    }
     this.showToast = true;
     setTimeout(() => this.showToast = false, 3000);
   }
