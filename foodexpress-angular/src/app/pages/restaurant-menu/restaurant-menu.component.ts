@@ -93,9 +93,21 @@ import { MenuItem } from '../../models/menu.model';
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <!-- Items -->
           <div class="lg:col-span-2 space-y-8">
+            <div *ngIf="displayedMenu().length === 0"
+                 class="bg-white rounded-xl border border-dashed border-gray-300 p-8 text-center">
+              <p class="text-lg font-semibold text-gray-800 mb-2">Aucun plat trouvé</p>
+              <p class="text-gray-600 mb-4">Essayez une autre recherche ou réinitialisez les filtres.</p>
+              <button type="button" (click)="resetFilters()"
+                      class="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">
+                Réinitialiser les filtres
+              </button>
+            </div>
             <ng-container *ngFor="let entry of displayedMenu()">
               <div>
-                <h2 class="text-2xl font-bold text-gray-900 mb-4">{{ entry.category }}</h2>
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">
+                  {{ entry.category }}
+                  <span class="ml-2 text-sm font-medium text-gray-500">({{ entry.items.length }} plats)</span>
+                </h2>
                 <div class="space-y-4">
                   <div *ngFor="let item of entry.items"
                        [class]="'bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all ' + (!item.available ? 'opacity-60' : '')">
@@ -217,6 +229,13 @@ export class RestaurantMenuComponent implements OnInit {
     const id = this.route.snapshot.paramMap.get('id')!;
     this.restaurantService.getById(id).subscribe(r => this.restaurant.set(r));
     this.menuService.getByRestaurant(id).subscribe(data => this.menuData.set(data));
+  }
+
+  resetFilters(): void {
+    this.searchQuery = '';
+    this.onlyAvailable = false;
+    this.sortBy = 'default';
+    this.selectedCat = null;
   }
 
   addToCart(item: MenuItem): void {
