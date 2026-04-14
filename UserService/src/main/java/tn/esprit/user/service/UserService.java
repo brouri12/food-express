@@ -2,6 +2,8 @@ package tn.esprit.user.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tn.esprit.user.dto.RegisterRequest;
@@ -20,14 +22,15 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final KeycloakService keycloakService;
+    private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Transactional
     public User registerUser(RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("Username already taken: " + request.getUsername());
+            throw new RuntimeException("Registration failed. Please check your input.");
         }
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already in use: " + request.getEmail());
+            throw new RuntimeException("Registration failed. Please check your input.");
         }
 
         String keycloakId = keycloakService.createKeycloakUser(request);
@@ -36,7 +39,7 @@ public class UserService {
         user.setKeycloak_id(keycloakId);
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
-        user.setPassword(request.getPassword());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(request.getRole());
         user.setNom(request.getNom());
         user.setPrenom(request.getPrenom());
