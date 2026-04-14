@@ -536,7 +536,9 @@ export class RestaurantMenuComponent implements OnInit {
       this.onlyAvailable = !!saved.onlyAvailable;
       this.onlyVegetarian = !!saved.onlyVegetarian;
       this.onlyPopular = !!saved.onlyPopular;
-      this.maxPrice = typeof saved.maxPrice === 'number' ? saved.maxPrice : 80;
+      this.maxPrice = typeof saved.maxPrice === 'number'
+        ? Math.min(80, Math.max(5, saved.maxPrice))
+        : 80;
       this.sortBy = saved.sortBy ?? 'default';
     } catch {
       sessionStorage.removeItem(this.MENU_FILTERS_KEY);
