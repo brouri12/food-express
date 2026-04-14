@@ -135,11 +135,15 @@ import { MenuItem } from '../../models/menu.model';
             </div>
             <ng-container *ngFor="let entry of displayedMenu()">
               <div>
-                <h2 class="text-2xl font-bold text-gray-900 mb-4">
-                  {{ entry.category }}
-                  <span class="ml-2 text-sm font-medium text-gray-500">({{ entry.items.length }} plats)</span>
-                </h2>
-                <div class="space-y-4">
+                <button type="button" (click)="toggleCategory(entry.category)"
+                        class="w-full text-left flex items-center justify-between mb-4">
+                  <h2 class="text-2xl font-bold text-gray-900">
+                    {{ entry.category }}
+                    <span class="ml-2 text-sm font-medium text-gray-500">({{ entry.items.length }} plats)</span>
+                  </h2>
+                  <span class="text-gray-500 text-xl">{{ isCategoryCollapsed(entry.category) ? '▸' : '▾' }}</span>
+                </button>
+                <div class="space-y-4" *ngIf="!isCategoryCollapsed(entry.category)">
                   <div *ngFor="let item of entry.items"
                        [class]="'bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all ' + (!item.available ? 'opacity-60' : '')">
                     <div class="flex gap-4 p-4">
@@ -227,6 +231,7 @@ export class RestaurantMenuComponent implements OnInit {
   onlyPopular = false;
   maxPrice = 80;
   sortBy: 'default' | 'nameAsc' | 'priceAsc' | 'priceDesc' = 'default';
+  collapsedCategories = signal<Record<string, boolean>>({});
   showToast = false;
   cartCount = this.cart.count;
 
@@ -245,6 +250,7 @@ export class RestaurantMenuComponent implements OnInit {
     this.onlyVegetarian ||
     this.onlyPopular ||
     this.maxPrice < 80;
+  isCategoryCollapsed = (category: string) => !!this.collapsedCategories()[category];
 
   displayedMenu = () => {
     const data = this.menuData();
@@ -304,6 +310,14 @@ export class RestaurantMenuComponent implements OnInit {
     this.maxPrice = 80;
     this.sortBy = 'default';
     this.selectedCat = null;
+  }
+
+  toggleCategory(category: string): void {
+    const current = this.collapsedCategories();
+    this.collapsedCategories.set({
+      ...current,
+      [category]: !current[category]
+    });
   }
 
   addToCart(item: MenuItem): void {
