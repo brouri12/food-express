@@ -71,6 +71,7 @@ import { MenuItem } from '../../models/menu.model';
           <div class="pb-4 grid grid-cols-1 md:grid-cols-3 gap-3">
             <input type="text"
                    [(ngModel)]="searchQuery"
+                   (keydown)="onSearchKeyDown($event)"
                    placeholder="Rechercher un plat..."
                    aria-label="Rechercher un plat du menu"
                    class="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" />
@@ -87,6 +88,7 @@ import { MenuItem } from '../../models/menu.model';
               Afficher seulement les plats disponibles
             </label>
           </div>
+          <p class="pb-4 text-xs text-gray-500">Astuce: appuyez sur Echap dans la recherche pour effacer rapidement.</p>
           <div class="pb-4 grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
             <div class="text-sm text-gray-700">
               Prix max: <span class="font-semibold">{{ maxPrice }}€</span>
@@ -342,6 +344,13 @@ export class RestaurantMenuComponent implements OnInit {
       this.menuData.set(data);
       this.loading = false;
     });
+  }
+
+  onSearchKeyDown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      this.searchQuery = '';
+      this.page = 1;
+    }
   }
 
   resetFilters(): void {
