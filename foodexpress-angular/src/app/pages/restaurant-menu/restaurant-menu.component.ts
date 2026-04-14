@@ -13,11 +13,11 @@ import { MenuItem } from '../../models/menu.model';
   standalone: true,
   imports: [CommonModule, RouterLink, FormsModule],
   template: `
-    <div class="min-h-screen bg-gray-50" *ngIf="restaurant()">
+    <div class="min-h-screen bg-gray-50" *ngIf="restaurant() && !loading">
       <!-- Toast -->
       <div *ngIf="showToast"
            class="fixed top-20 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-xl z-50 flex items-center gap-2 fade-in">
-        🛒 Ajouté au panier !
+        🛒 {{ toastMessage }}
       </div>
 
       <!-- Hero Image -->
@@ -58,22 +58,33 @@ import { MenuItem } from '../../models/menu.model';
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div class="flex items-center gap-2 overflow-x-auto py-4 scrollbar-hide">
             <span class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full whitespace-nowrap">API: Menu Service</span>
-            <button (click)="selectedCat = null"
+            <button (click)="selectCategory(null)"
                     [class]="'px-4 py-2 rounded-full font-semibold whitespace-nowrap transition-all ' + (!selectedCat ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white' : 'bg-gray-100 text-gray-700')">
               Tout le menu
             </button>
-            <button *ngFor="let cat of menuCategories()"
-                    (click)="selectedCat = cat"
+            <button *ngFor="let cat of menuCategories(); trackBy: trackByCategory"
+                    (click)="selectCategory(cat)"
                     [class]="'px-4 py-2 rounded-full font-semibold whitespace-nowrap transition-all ' + (selectedCat === cat ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white' : 'bg-gray-100 text-gray-700')">
               {{ cat }}
             </button>
           </div>
           <div class="pb-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-            <input type="text"
-                   [(ngModel)]="searchQuery"
-                   placeholder="Rechercher un plat..."
-                   class="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" />
+            <div class="relative">
+              <input type="text"
+                     [(ngModel)]="searchQuery"
+                     (ngModelChange)="onFiltersChange()"
+                     (keydown)="onSearchKeyDown($event)"
+                     placeholder="Rechercher un plat..."
+                     aria-label="Rechercher un plat du menu"
+                     class="w-full pl-4 pr-10 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" />
+              <button *ngIf="searchQuery.trim()" type="button" (click)="clearSearch()"
+                      class="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full text-gray-500 hover:bg-gray-100">
+                ✕
+              </button>
+            </div>
             <select [(ngModel)]="sortBy"
+                    (ngModelChange)="onFiltersChange()"
+                    aria-label="Trier les plats"
                     class="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
               <option value="default">Tri par défaut</option>
               <option value="nameAsc">Nom A-Z</option>
@@ -81,9 +92,42 @@ import { MenuItem } from '../../models/menu.model';
               <option value="priceDesc">Prix décroissant</option>
             </select>
             <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
-              <input type="checkbox" [(ngModel)]="onlyAvailable" class="rounded border-gray-300 text-orange-500" />
+              <input type="checkbox" [(ngModel)]="onlyAvailable" (ngModelChange)="onFiltersChange()" aria-label="Afficher seulement les plats disponibles" class="rounded border-gray-300 text-orange-500" />
               Afficher seulement les plats disponibles
             </label>
+          </div>
+          <p class="pb-4 text-xs text-gray-500">Astuce: appuyez sur Echap dans la recherche pour effacer rapidement.</p>
+          <div class="pb-4 grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
+            <div class="text-sm text-gray-700">
+              Prix max: <span class="font-semibold">{{ maxPrice }}€</span>
+            </div>
+            <input type="range" min="5" max="80" step="1" [(ngModel)]="maxPrice"
+                   (ngModelChange)="onFiltersChange()"
+                   aria-label="Filtrer par prix maximum"
+                   class="w-full accent-orange-500" />
+            <div class="flex items-center gap-2">
+              <button type="button" (click)="onlyVegetarian = !onlyVegetarian; onFiltersChange()"
+                      [class]="'px-3 py-1 rounded-full text-sm font-semibold transition-colors ' + (onlyVegetarian ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700')">
+                🌿 Végétarien
+              </button>
+              <button type="button" (click)="onlyPopular = !onlyPopular; onFiltersChange()"
+                      [class]="'px-3 py-1 rounded-full text-sm font-semibold transition-colors ' + (onlyPopular ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-700')">
+                ⭐ Populaire
+              </button>
+            </div>
+          </div>
+          <div class="pb-4 flex flex-wrap items-center gap-2" *ngIf="hasActiveFilters()">
+            <span class="text-xs text-gray-500">Filtres actifs :</span>
+            <span *ngIf="selectedCat" class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">Catégorie: {{ selectedCat }}</span>
+            <span *ngIf="searchQuery.trim()" class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">Recherche: "{{ searchQuery }}"</span>
+            <span *ngIf="onlyAvailable" class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">Disponibles</span>
+            <span *ngIf="onlyVegetarian" class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">Végétarien</span>
+            <span *ngIf="onlyPopular" class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">Populaire</span>
+            <span *ngIf="maxPrice < 80" class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">Prix ≤ {{ maxPrice }}€</span>
+            <button type="button" (click)="resetFilters()"
+                    class="ml-1 px-2 py-1 rounded-full text-xs font-semibold text-red-600 border border-red-200 hover:bg-red-50">
+              Tout effacer
+            </button>
           </div>
         </div>
       </div>
@@ -93,6 +137,7 @@ import { MenuItem } from '../../models/menu.model';
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <!-- Items -->
           <div class="lg:col-span-2 space-y-8">
+            <p class="text-sm text-gray-500">Résultats : {{ visibleItemsCount() }} plat(s)</p>
             <div *ngIf="displayedMenu().length === 0"
                  class="bg-white rounded-xl border border-dashed border-gray-300 p-8 text-center">
               <p class="text-lg font-semibold text-gray-800 mb-2">Aucun plat trouvé</p>
@@ -102,14 +147,18 @@ import { MenuItem } from '../../models/menu.model';
                 Réinitialiser les filtres
               </button>
             </div>
-            <ng-container *ngFor="let entry of displayedMenu()">
+            <ng-container *ngFor="let entry of pagedDisplayedMenu(); trackBy: trackByEntryCategory">
               <div>
-                <h2 class="text-2xl font-bold text-gray-900 mb-4">
-                  {{ entry.category }}
-                  <span class="ml-2 text-sm font-medium text-gray-500">({{ entry.items.length }} plats)</span>
-                </h2>
-                <div class="space-y-4">
-                  <div *ngFor="let item of entry.items"
+                <button type="button" (click)="toggleCategory(entry.category)"
+                        class="w-full text-left flex items-center justify-between mb-4">
+                  <h2 class="text-2xl font-bold text-gray-900">
+                    {{ entry.category }}
+                    <span class="ml-2 text-sm font-medium text-gray-500">({{ entry.items.length }} plats)</span>
+                  </h2>
+                  <span class="text-gray-500 text-xl">{{ isCategoryCollapsed(entry.category) ? '▸' : '▾' }}</span>
+                </button>
+                <div class="space-y-4" *ngIf="!isCategoryCollapsed(entry.category)">
+                  <div *ngFor="let item of entry.items; trackBy: trackByItemId"
                        [class]="'bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all ' + (!item.available ? 'opacity-60' : '')">
                     <div class="flex gap-4 p-4">
                       <div class="flex-1">
@@ -121,15 +170,23 @@ import { MenuItem } from '../../models/menu.model';
                         <p class="text-gray-600 text-sm mb-3 line-clamp-2">{{ item.description }}</p>
                         <div class="flex items-center justify-between">
                           <span class="font-bold text-lg text-gray-900">{{ item.price | number:'1.2-2' }}€</span>
-                          <button *ngIf="item.available" (click)="addToCart(item)"
-                                  class="bg-gradient-to-r from-orange-500 to-red-500 text-white p-2 rounded-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-md">
-                            +
-                          </button>
+                          <div *ngIf="item.available" class="flex items-center gap-2">
+                            <button type="button" (click)="changeDraftQty(item.id, -1)"
+                                    [disabled]="getDraftQty(item.id) <= 1"
+                                    class="w-8 h-8 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">-</button>
+                            <span class="w-6 text-center text-sm font-semibold">{{ getDraftQty(item.id) }}</span>
+                            <button type="button" (click)="changeDraftQty(item.id, 1)"
+                                    class="w-8 h-8 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">+</button>
+                            <button (click)="addToCart(item)"
+                                    class="bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-2 rounded-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-md text-sm font-semibold">
+                              Ajouter
+                            </button>
+                          </div>
                           <span *ngIf="!item.available" class="text-gray-400 text-sm">Indisponible</span>
                         </div>
                       </div>
                       <div class="w-24 h-24 flex-shrink-0">
-                        <img [src]="item.image || item.imageUrl" [alt]="item.name"
+                        <img [src]="item.image || item.imageUrl || 'https://via.placeholder.com/96x96?text=Plat'" [alt]="item.name"
                              class="w-full h-full object-cover rounded-lg" />
                       </div>
                     </div>
@@ -137,12 +194,33 @@ import { MenuItem } from '../../models/menu.model';
                 </div>
               </div>
             </ng-container>
+            <div *ngIf="totalPages() > 1" class="flex items-center justify-center gap-3 pt-2">
+              <button type="button" (click)="goToPreviousPage()" [disabled]="page <= 1"
+                      class="px-3 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-gray-700 disabled:opacity-40">
+                Précédent
+              </button>
+              <span class="text-sm text-gray-600">Page {{ page }} / {{ totalPages() }}</span>
+              <button type="button" (click)="goToNextPage()" [disabled]="page >= totalPages()"
+                      class="px-3 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-gray-700 disabled:opacity-40">
+                Suivant
+              </button>
+            </div>
           </div>
 
           <!-- Sidebar -->
           <div class="lg:col-span-1">
             <div class="bg-white rounded-xl shadow-sm p-6 sticky top-40">
               <h3 class="font-bold text-gray-900 mb-4">ℹ️ Informations</h3>
+              <div class="grid grid-cols-2 gap-3 mb-4">
+                <div class="bg-orange-50 rounded-lg p-3 text-center">
+                  <p class="text-xs text-gray-500">Plats visibles</p>
+                  <p class="text-lg font-bold text-orange-600">{{ visibleItemsCount() }}</p>
+                </div>
+                <div class="bg-blue-50 rounded-lg p-3 text-center">
+                  <p class="text-xs text-gray-500">Prix moyen</p>
+                  <p class="text-lg font-bold text-blue-600">{{ averageVisiblePrice() | number:'1.2-2' }}€</p>
+                </div>
+              </div>
               <div class="space-y-3 text-sm">
                 <div class="flex justify-between">
                   <span class="text-gray-600">Commande minimum</span>
@@ -165,28 +243,71 @@ import { MenuItem } from '../../models/menu.model';
           </div>
         </div>
       </div>
+
+      <button type="button" (click)="scrollToTop()"
+              class="fixed bottom-20 md:bottom-6 right-4 w-10 h-10 rounded-full bg-white border border-gray-200 shadow-md text-gray-700 hover:bg-gray-50">
+        ↑
+      </button>
     </div>
 
     <!-- Loading -->
-    <div *ngIf="!restaurant()" class="min-h-screen flex items-center justify-center">
-      <div class="text-center">
-        <div class="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p class="text-gray-600">Chargement...</p>
+    <div *ngIf="loading" class="min-h-screen bg-gray-50">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 animate-pulse">
+        <div class="h-64 md:h-80 rounded-2xl bg-gray-200"></div>
+        <div class="h-12 rounded-xl bg-gray-200"></div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div class="lg:col-span-2 space-y-4">
+            <div class="h-32 rounded-xl bg-gray-200"></div>
+            <div class="h-32 rounded-xl bg-gray-200"></div>
+            <div class="h-32 rounded-xl bg-gray-200"></div>
+          </div>
+          <div class="h-64 rounded-xl bg-gray-200"></div>
+        </div>
       </div>
     </div>
   `
 })
 export class RestaurantMenuComponent implements OnInit {
+  private readonly MENU_FILTERS_KEY = 'fe_menu_filters_v1';
   restaurant = signal<Restaurant | null>(null);
   menuData = signal<Record<string, MenuItem[]>>({});
   selectedCat: string | null = null;
   searchQuery = '';
   onlyAvailable = false;
+  onlyVegetarian = false;
+  onlyPopular = false;
+  maxPrice = 80;
   sortBy: 'default' | 'nameAsc' | 'priceAsc' | 'priceDesc' = 'default';
+  collapsedCategories = signal<Record<string, boolean>>({});
+  draftQty = signal<Record<string, number>>({});
+  loading = true;
+  page = 1;
+  readonly categoriesPerPage = 2;
   showToast = false;
+  toastMessage = 'Ajouté au panier !';
   cartCount = this.cart.count;
 
   menuCategories = () => Object.keys(this.menuData());
+  visibleItemsCount = () => this.displayedMenu().reduce((acc, entry) => acc + entry.items.length, 0);
+  averageVisiblePrice = () => {
+    const items = this.displayedMenu().flatMap(entry => entry.items);
+    if (items.length === 0) return 0;
+    const total = items.reduce((acc, item) => acc + item.price, 0);
+    return total / items.length;
+  };
+  hasActiveFilters = () =>
+    !!this.selectedCat ||
+    !!this.searchQuery.trim() ||
+    this.onlyAvailable ||
+    this.onlyVegetarian ||
+    this.onlyPopular ||
+    this.maxPrice < 80;
+  isCategoryCollapsed = (category: string) => !!this.collapsedCategories()[category];
+  totalPages = () => Math.max(1, Math.ceil(this.displayedMenu().length / this.categoriesPerPage));
+  pagedDisplayedMenu = () => {
+    const start = (this.page - 1) * this.categoriesPerPage;
+    return this.displayedMenu().slice(start, start + this.categoriesPerPage);
+  };
 
   displayedMenu = () => {
     const data = this.menuData();
@@ -198,6 +319,13 @@ export class RestaurantMenuComponent implements OnInit {
         if (this.onlyAvailable) {
           items = items.filter(item => item.available);
         }
+        if (this.onlyVegetarian) {
+          items = items.filter(item => item.vegetarian);
+        }
+        if (this.onlyPopular) {
+          items = items.filter(item => item.popular);
+        }
+        items = items.filter(item => item.price <= this.maxPrice);
         if (query) {
           items = items.filter(item =>
             item.name.toLowerCase().includes(query) ||
@@ -226,29 +354,136 @@ export class RestaurantMenuComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.restoreFilters();
     const id = this.route.snapshot.paramMap.get('id')!;
     this.restaurantService.getById(id).subscribe(r => this.restaurant.set(r));
-    this.menuService.getByRestaurant(id).subscribe(data => this.menuData.set(data));
+    this.menuService.getByRestaurant(id).subscribe(data => {
+      this.menuData.set(data);
+      this.loading = false;
+    });
+  }
+
+  onSearchKeyDown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      this.clearSearch();
+    }
+  }
+
+  clearSearch(): void {
+    this.searchQuery = '';
+    this.onFiltersChange();
+  }
+
+  scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   resetFilters(): void {
     this.searchQuery = '';
     this.onlyAvailable = false;
+    this.onlyVegetarian = false;
+    this.onlyPopular = false;
+    this.maxPrice = 80;
     this.sortBy = 'default';
     this.selectedCat = null;
+    this.page = 1;
+    this.saveFilters();
+  }
+
+  selectCategory(category: string | null): void {
+    this.selectedCat = category;
+    this.page = 1;
+    this.saveFilters();
+  }
+
+  goToPreviousPage(): void {
+    this.page = Math.max(1, this.page - 1);
+  }
+
+  goToNextPage(): void {
+    this.page = Math.min(this.totalPages(), this.page + 1);
+  }
+
+  trackByCategory = (_: number, category: string): string => category;
+  trackByEntryCategory = (_: number, entry: { category: string }): string => entry.category;
+  trackByItemId = (_: number, item: MenuItem): string => item.id;
+
+  toggleCategory(category: string): void {
+    const current = this.collapsedCategories();
+    this.collapsedCategories.set({
+      ...current,
+      [category]: !current[category]
+    });
+  }
+
+  getDraftQty(itemId: string): number {
+    return this.draftQty()[itemId] || 1;
+  }
+
+  changeDraftQty(itemId: string, delta: number): void {
+    const current = this.getDraftQty(itemId);
+    const next = Math.max(1, current + delta);
+    this.draftQty.set({ ...this.draftQty(), [itemId]: next });
+  }
+
+  onFiltersChange(): void {
+    this.page = 1;
+    this.saveFilters();
   }
 
   addToCart(item: MenuItem): void {
     const r = this.restaurant()!;
-    this.cart.add({
-      id: item.id,
-      restaurantId: r.id,
-      restaurantName: r.name,
-      name: item.name,
-      price: item.price,
-      image: item.image || item.imageUrl || '',
-    });
+    const qty = this.getDraftQty(item.id);
+    for (let i = 0; i < qty; i++) {
+      this.cart.add({
+        id: item.id,
+        restaurantId: r.id,
+        restaurantName: r.name,
+        name: item.name,
+        price: item.price,
+        image: item.image || item.imageUrl || '',
+      });
+    }
+    this.toastMessage = qty > 1 ? `${qty}x ${item.name} ajoutés au panier` : `${item.name} ajouté au panier`;
+    this.draftQty.set({ ...this.draftQty(), [item.id]: 1 });
     this.showToast = true;
     setTimeout(() => this.showToast = false, 3000);
+  }
+
+  private saveFilters(): void {
+    sessionStorage.setItem(this.MENU_FILTERS_KEY, JSON.stringify({
+      selectedCat: this.selectedCat,
+      searchQuery: this.searchQuery,
+      onlyAvailable: this.onlyAvailable,
+      onlyVegetarian: this.onlyVegetarian,
+      onlyPopular: this.onlyPopular,
+      maxPrice: this.maxPrice,
+      sortBy: this.sortBy
+    }));
+  }
+
+  private restoreFilters(): void {
+    const raw = sessionStorage.getItem(this.MENU_FILTERS_KEY);
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw) as {
+        selectedCat: string | null;
+        searchQuery: string;
+        onlyAvailable: boolean;
+        onlyVegetarian: boolean;
+        onlyPopular: boolean;
+        maxPrice: number;
+        sortBy: 'default' | 'nameAsc' | 'priceAsc' | 'priceDesc';
+      };
+      this.selectedCat = saved.selectedCat ?? null;
+      this.searchQuery = saved.searchQuery ?? '';
+      this.onlyAvailable = !!saved.onlyAvailable;
+      this.onlyVegetarian = !!saved.onlyVegetarian;
+      this.onlyPopular = !!saved.onlyPopular;
+      this.maxPrice = typeof saved.maxPrice === 'number' ? saved.maxPrice : 80;
+      this.sortBy = saved.sortBy ?? 'default';
+    } catch {
+      sessionStorage.removeItem(this.MENU_FILTERS_KEY);
+    }
   }
 }
