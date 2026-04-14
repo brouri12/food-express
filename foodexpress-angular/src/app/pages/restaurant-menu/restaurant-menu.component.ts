@@ -243,6 +243,11 @@ import { MenuItem } from '../../models/menu.model';
           </div>
         </div>
       </div>
+
+      <button type="button" (click)="scrollToTop()"
+              class="fixed bottom-20 md:bottom-6 right-4 w-10 h-10 rounded-full bg-white border border-gray-200 shadow-md text-gray-700 hover:bg-gray-50">
+        ↑
+      </button>
     </div>
 
     <!-- Loading -->
@@ -367,6 +372,10 @@ export class RestaurantMenuComponent implements OnInit {
   clearSearch(): void {
     this.searchQuery = '';
     this.onFiltersChange();
+  }
+
+  scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   resetFilters(): void {
