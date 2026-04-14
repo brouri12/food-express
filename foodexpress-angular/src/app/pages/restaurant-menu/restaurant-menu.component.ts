@@ -121,8 +121,8 @@ import { MenuItem } from '../../models/menu.model';
             <span *ngIf="selectedCat" class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">Catégorie: {{ selectedCat }}</span>
             <span *ngIf="searchQuery.trim()" class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">Recherche: "{{ searchQuery }}"</span>
             <span *ngIf="onlyAvailable" class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">Disponibles</span>
-            <span *ngIf="onlyVegetarian" class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">Végétarien</span>
-            <span *ngIf="onlyPopular" class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">Populaire</span>
+            <button *ngIf="onlyVegetarian" type="button" (click)="onlyVegetarian = false; onFiltersChange()" class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs hover:bg-gray-200">Végétarien ✕</button>
+            <button *ngIf="onlyPopular" type="button" (click)="onlyPopular = false; onFiltersChange()" class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs hover:bg-gray-200">Populaire ✕</button>
             <span *ngIf="maxPrice < 80" class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">Prix ≤ {{ maxPrice }}€</span>
             <span *ngIf="sortBy !== 'default'" class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">Tri: {{ sortLabel() }}</span>
             <button type="button" (click)="resetFilters()"
