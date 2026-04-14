@@ -124,6 +124,7 @@ import { MenuItem } from '../../models/menu.model';
             <span *ngIf="onlyVegetarian" class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">Végétarien</span>
             <span *ngIf="onlyPopular" class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">Populaire</span>
             <span *ngIf="maxPrice < 80" class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">Prix ≤ {{ maxPrice }}€</span>
+            <span *ngIf="sortBy !== 'default'" class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">Tri: {{ sortLabel() }}</span>
             <button type="button" (click)="resetFilters()"
                     class="ml-1 px-2 py-1 rounded-full text-xs font-semibold text-red-600 border border-red-200 hover:bg-red-50">
               Tout effacer
@@ -305,7 +306,14 @@ export class RestaurantMenuComponent implements OnInit {
     this.onlyAvailable ||
     this.onlyVegetarian ||
     this.onlyPopular ||
-    this.maxPrice < 80;
+    this.maxPrice < 80 ||
+    this.sortBy !== 'default';
+  sortLabel = () => {
+    if (this.sortBy === 'nameAsc') return 'Nom A-Z';
+    if (this.sortBy === 'priceAsc') return 'Prix croissant';
+    if (this.sortBy === 'priceDesc') return 'Prix décroissant';
+    return 'Défaut';
+  };
   isCategoryCollapsed = (category: string) => !!this.collapsedCategories()[category];
   totalPages = () => Math.max(1, Math.ceil(this.displayedMenu().length / this.categoriesPerPage));
   pagedDisplayedMenu = () => {
