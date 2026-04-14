@@ -224,6 +224,9 @@ import { MenuItem } from '../../models/menu.model';
                   Vider cache
                 </button>
               </div>
+              <p *ngIf="cachedIdsPreview()" class="text-[11px] text-gray-400 mb-3">
+                IDs en cache: {{ cachedIdsPreview() }}
+              </p>
               <div class="grid grid-cols-2 gap-3 mb-4">
                 <div class="bg-orange-50 rounded-lg p-3 text-center">
                   <p class="text-xs text-gray-500">Plats visibles</p>
@@ -319,6 +322,7 @@ export class RestaurantMenuComponent implements OnInit {
     return total / items.length;
   };
   cacheSize = () => this.menuService.getCacheSize();
+  cachedIdsPreview = () => this.menuService.getCachedRestaurantIds().slice(0, 3).join(', ');
   hasActiveFilters = () =>
     !!this.selectedCat ||
     !!this.searchQuery.trim() ||
