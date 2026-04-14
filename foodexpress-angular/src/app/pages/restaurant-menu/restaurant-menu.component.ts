@@ -217,7 +217,13 @@ import { MenuItem } from '../../models/menu.model';
           <div class="lg:col-span-1">
             <div class="bg-white rounded-xl shadow-sm p-6 sticky top-40">
               <h3 class="font-bold text-gray-900 mb-4">ℹ️ Informations</h3>
-              <p class="text-xs text-gray-500 mb-3">Cache menu: {{ cacheSize() }} restaurant(s)</p>
+              <div class="flex items-center justify-between mb-3">
+                <p class="text-xs text-gray-500">Cache menu: {{ cacheSize() }} restaurant(s)</p>
+                <button type="button" (click)="clearMenuCache()"
+                        class="text-xs text-orange-600 hover:text-orange-700 font-semibold">
+                  Vider cache
+                </button>
+              </div>
               <div class="grid grid-cols-2 gap-3 mb-4">
                 <div class="bg-orange-50 rounded-lg p-3 text-center">
                   <p class="text-xs text-gray-500">Plats visibles</p>
@@ -460,6 +466,10 @@ export class RestaurantMenuComponent implements OnInit {
   onFiltersChange(): void {
     this.page = 1;
     this.saveFilters();
+  }
+
+  clearMenuCache(): void {
+    this.menuService.clearMenuCache();
   }
 
   applyMaxPrice(value: number): void {
