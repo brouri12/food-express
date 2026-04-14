@@ -1,6 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { RestaurantService } from '../../services/restaurant.service';
 import { MenuService } from '../../services/menu.service';
 import { CartService } from '../../services/cart.service';
@@ -10,7 +11,7 @@ import { MenuItem } from '../../models/menu.model';
 @Component({
   selector: 'app-restaurant-menu',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, FormsModule],
   template: `
     <div class="min-h-screen bg-gray-50" *ngIf="restaurant()">
       <!-- Toast -->
@@ -66,6 +67,23 @@ import { MenuItem } from '../../models/menu.model';
                     [class]="'px-4 py-2 rounded-full font-semibold whitespace-nowrap transition-all ' + (selectedCat === cat ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white' : 'bg-gray-100 text-gray-700')">
               {{ cat }}
             </button>
+          </div>
+          <div class="pb-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+            <input type="text"
+                   [(ngModel)]="searchQuery"
+                   placeholder="Rechercher un plat..."
+                   class="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" />
+            <select [(ngModel)]="sortBy"
+                    class="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+              <option value="default">Tri par défaut</option>
+              <option value="nameAsc">Nom A-Z</option>
+              <option value="priceAsc">Prix croissant</option>
+              <option value="priceDesc">Prix décroissant</option>
+            </select>
+            <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
+              <input type="checkbox" [(ngModel)]="onlyAvailable" class="rounded border-gray-300 text-orange-500" />
+              Afficher seulement les plats disponibles
+            </label>
           </div>
         </div>
       </div>
@@ -150,6 +168,9 @@ export class RestaurantMenuComponent implements OnInit {
   restaurant = signal<Restaurant | null>(null);
   menuData = signal<Record<string, MenuItem[]>>({});
   selectedCat: string | null = null;
+  searchQuery = '';
+  onlyAvailable = false;
+  sortBy: 'default' | 'nameAsc' | 'priceAsc' | 'priceDesc' = 'default';
   showToast = false;
   cartCount = this.cart.count;
 
@@ -158,7 +179,31 @@ export class RestaurantMenuComponent implements OnInit {
   displayedMenu = () => {
     const data = this.menuData();
     const cats = this.selectedCat ? [this.selectedCat] : Object.keys(data);
-    return cats.map(cat => ({ category: cat, items: data[cat] || [] }));
+    const query = this.searchQuery.trim().toLowerCase();
+    return cats
+      .map(cat => {
+        let items = [...(data[cat] || [])];
+        if (this.onlyAvailable) {
+          items = items.filter(item => item.available);
+        }
+        if (query) {
+          items = items.filter(item =>
+            item.name.toLowerCase().includes(query) ||
+            item.description.toLowerCase().includes(query)
+          );
+        }
+        if (this.sortBy === 'nameAsc') {
+          items.sort((a, b) => a.name.localeCompare(b.name));
+        }
+        if (this.sortBy === 'priceAsc') {
+          items.sort((a, b) => a.price - b.price);
+        }
+        if (this.sortBy === 'priceDesc') {
+          items.sort((a, b) => b.price - a.price);
+        }
+        return { category: cat, items };
+      })
+      .filter(entry => entry.items.length > 0);
   };
 
   constructor(
