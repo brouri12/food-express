@@ -17,7 +17,7 @@ import { MenuItem } from '../../models/menu.model';
       <!-- Toast -->
       <div *ngIf="showToast"
            class="fixed top-20 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-xl z-50 flex items-center gap-2 fade-in">
-        🛒 Ajouté au panier !
+        🛒 {{ toastMessage }}
       </div>
 
       <!-- Hero Image -->
@@ -279,6 +279,7 @@ export class RestaurantMenuComponent implements OnInit {
   page = 1;
   readonly categoriesPerPage = 2;
   showToast = false;
+  toastMessage = 'Ajouté au panier !';
   cartCount = this.cart.count;
 
   menuCategories = () => Object.keys(this.menuData());
@@ -434,6 +435,8 @@ export class RestaurantMenuComponent implements OnInit {
         image: item.image || item.imageUrl || '',
       });
     }
+    this.toastMessage = qty > 1 ? `${qty}x ${item.name} ajoutés au panier` : `${item.name} ajouté au panier`;
+    this.draftQty.set({ ...this.draftQty(), [item.id]: 1 });
     this.showToast = true;
     setTimeout(() => this.showToast = false, 3000);
   }
